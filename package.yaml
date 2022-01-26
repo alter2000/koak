@@ -1,0 +1,63 @@
+name:                koak
+version:             0.1.0.0
+github:              "EpitechPromo2024/B-YEP-500-MPL-5-1-yearendproject-alec.ferrari"
+license:             BSD3
+author:              "Alec Ferrari, Jor Bashllari"
+maintainer:          "altnate2000@gmail.com"
+copyright:           "us"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+synopsis:            Kaleidoscope interperer + (eventually) JIT+AoT compiler
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/EpitechPromo2024/B-YEP-500-MPL-5-1-yearendproject-alec.ferrari#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- containers
+- mtl
+- recursion-schemes
+- llvm-hs
+- llvm-hs-pure
+- bytestring
+- validation
+# - microlens
+# - conduit
+
+library:
+  source-dirs: src
+
+executables:
+  koak-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - koak
+
+tests:
+  koak-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - koak
+    - hedgehog
+    - hspec
+    - tasty-golden
+    - tasty
+    - pretty-simple
+    - bytestring
