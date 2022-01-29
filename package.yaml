@@ -28,6 +28,7 @@ dependencies:
 - llvm-hs-pure
 - bytestring
 - validation
+- haskeline
 # - microlens
 # - conduit
 

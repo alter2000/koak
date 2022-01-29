@@ -27,6 +27,9 @@ source-repository head
 library
   exposed-modules:
       Lib
+      Parser.AST
+      Parser.ParseError
+      Parser.Parser
       RecursionSchemes
       Types.AST
       Types.Cofree
@@ -34,7 +37,6 @@ library
       Types.Interp
       Types.Pos
       Types.Valid
-      Util
   other-modules:
       Paths_koak
   hs-source-dirs:
@@ -43,6 +45,7 @@ library
       base >=4.7 && <5
     , bytestring
     , containers
+    , haskeline
     , llvm-hs
     , llvm-hs-pure
     , mtl
@@ -61,6 +64,7 @@ executable koak-exe
       base >=4.7 && <5
     , bytestring
     , containers
+    , haskeline
     , koak
     , llvm-hs
     , llvm-hs-pure
@@ -81,6 +85,7 @@ test-suite koak-test
       base >=4.7 && <5
     , bytestring
     , containers
+    , haskeline
     , hedgehog
     , hspec
     , koak

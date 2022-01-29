@@ -34,9 +34,30 @@ instance Monoid Env where mempty = Env mempty
 
 instance Show Env where show = show . M.toList . getEnv
 
+
+data Expr
+  = Float Double
+  | Int Integer
+  | BinOp Op Expr Expr
+  | Var VarName
+  | Call VarName [Expr]
+  | Function VarName [Expr] Expr
+  -- | Function { fnName :: VarName
+  --            , fnArgs :: ![VarName]
+  --            , fnBody :: !r
+  --            , fnEnv  :: Env }
+  | Extern VarName [Expr]
+  deriving (Eq, Ord, Show)
+
+data Op = Plus
+        | Minus
+        | Times
+        | Divide
+  deriving (Eq, Ord, Show)
+
 -- | whole AST definition
 data ASTF r = Atom !VarName
-            | Int  !Integer
+            -- | Int  !Integer
             | Bool !Bool
             -- | Real !Rational
             | Str  !String
@@ -60,7 +81,7 @@ instance Functor ASTF where
   fmap _ (Atom a) = Atom a
   fmap _  (Str a) = Str  a
   fmap _ (Bool a) = Bool a
-  fmap _  (Int a) = Int a
+  -- fmap _  (Int a) = Int a
   fmap f (List r) = List $ f <$> r
   fmap f (DottedList r h) = DottedList (f <$> r) (f h)
   fmap f (Lambda p b c)   = Lambda p (f b) c
@@ -71,7 +92,7 @@ instance Foldable ASTF where
   foldMap _ (Atom _) = mempty
   foldMap _  (Str _) = mempty
   foldMap _ (Bool _) = mempty
-  foldMap _  (Int _) = mempty
+  -- foldMap _  (Int _) = mempty
   foldMap f (List r) = foldMap f r
   foldMap f (DottedList r h) = foldMap f r <> f h
   foldMap f (Lambda _ b _)   = f b
@@ -82,7 +103,7 @@ instance Traversable ASTF where
   traverse _ (Atom a) = pure $ Atom a
   traverse _  (Str a) = pure $ Str a
   traverse _ (Bool a) = pure $ Bool a
-  traverse _  (Int a) = pure $ Int a
+  -- traverse _  (Int a) = pure $ Int a
   traverse f (List r) = List <$> traverse f r
   traverse f (DottedList xs x) = DottedList <$> traverse f xs <*> f x
   traverse f (Lambda ps b ctx) = flip (Lambda ps) ctx <$> f b
@@ -91,7 +112,7 @@ instance Traversable ASTF where
 
 instance Show1 ASTF where
   liftShowsPrec _ _ _ (Atom a) = showString a
-  liftShowsPrec _ _ _  (Int s) = shows s
+  -- liftShowsPrec _ _ _  (Int s) = shows s
   liftShowsPrec _ _ _  (Str s) = showChar '"' . showString (concatMap
     (\a -> if a == '"' then "\\\"" else [a]) s) . showChar '"'
   liftShowsPrec _ _ _ (Bool a) = showString $ if a then "#t" else "#f"
@@ -108,7 +129,7 @@ showList' end pf p =
 
 instance Eq1 ASTF where
   liftEq _ (Atom a) (Atom b) = a == b
-  liftEq _  (Int a)  (Int b) = a == b
+  -- liftEq _  (Int a)  (Int b) = a == b
   liftEq _  (Str a)  (Str b) = a == b
   liftEq _ (Bool a) (Bool b) = a == b
   liftEq e (List a) (List b) = and $ zipWith e a b
@@ -142,8 +163,8 @@ atom = Fix . Atom
 str :: String -> AST'
 str = Fix . Str
 
-int :: Integer -> AST'
-int = Fix . Int
+-- int :: Integer -> AST'
+-- int = Fix . Int
 
 bool :: Bool -> AST'
 bool = Fix . Bool

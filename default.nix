@@ -1,8 +1,7 @@
 let
   pkgs = import (builtins.fetchGit {
       url = https://github.com/NixOS/nixpkgs;
-      ref = "nixos-21.05";
-      rev = "0fd9ee1aa36ce865ad273f4f07fdc093adeb5c00";
+      rev = "c7655fa3087cec120b13425f3e16bf378065fd8c";
     }) {};
 
   hpkgs = pkgs.haskell.packages.ghc8107;
@@ -23,6 +22,6 @@ in
 
 if pkgs.lib.inNixShell then hpkgs.shellFor {
   packages = p: with hpkgs; [ koak p.haskell-language-server ];
-  buildInputs = [ pkgs.stack pkgs.chez ];
+  buildInputs = [ pkgs.stack ];
   withHoogle = true;
 } else koak
