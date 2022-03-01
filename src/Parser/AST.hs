@@ -12,7 +12,8 @@ import Parser.Parser
 import Parser.ParseError
 
 data ASTDerivs = ASTDerivs
-  { adInt    :: Result ASTDerivs AST'
+  { adNatural   :: Result ASTDerivs AST'
+    adDecimal   :: Result ASTDerivs AST'
   -- , adBool   :: Result ASTDerivs AST'
   -- , adString :: Result ASTDerivs AST'
 
@@ -35,18 +36,21 @@ evalDerivs pos s = d where
      [] -> NoParse $ eofError d
     , adPos    = pos
     -- , adAtom   = pAtom d
-    , adInt    = pInt d
+    , adNatural     = pLiteral d
+    , adDecimal     = 
     -- , adString = pString d
 
     , adIgnore = pIgnore d
     -- , adElem   = pElem d
     }
 
+pExpr :: ASTDerivs -> Result ASTDerivs AST'
+pExpr = pLiteral
+
 parse :: String -> Either ParseError AST'
 parse s = case pExpr $ evalDerivs (Pos "<stdin>" 1 1) s of
     Parsed v _ _ -> Right v
     NoParse e -> Left e
-  where P pExpr = undefined -- P adIgnore *> P adElem
 
 parseFile :: FilePath -> String -> Either ParseError [AST']
 parseFile fname s = case pExpr $ evalDerivs (Pos fname 1 1) s of
@@ -74,8 +78,19 @@ P pIgnore = concat <$>
 --     _   -> pure (atom tok) <?> "atom"
 
 {- HLINT ignore "Avoid restricted function" -}
-pInt :: ASTDerivs -> Result ASTDerivs AST'
-P pInt = Fix . Int . read <$> some digit <?> "integer"
+pLiteral :: ASTDerivs -> Result ASTDerivs AST'
+pLiteral = pNatural <|> pDecimal
+
+pNatural :: ASTDerivs -> Result ASTDerivs AST'
+P pNatural = Fix . Literal . read <$> some digit <?> "integer"
+
+pDecimal :: ASTDerivs -> Result ASTDerivs AST'
+P pDecimal = Fix . Literal . read <$> do
+    n <- many digit
+    dt <- char '.'
+    d <- some digit
+    return (n ++ [dt] ++ d)
+  <?> "double"
 
 -- pHash :: ASTDerivs -> Result ASTDerivs AST'
 -- P pHash = P pBool -- <|> char '#' *> P pCustomNumber/Macro/Etc
