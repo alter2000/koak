@@ -22,7 +22,7 @@ hpkgs.shellFor {
     p.llvm-hs
   ];
   buildInputs = [ pkgs.stack pkgs.llvm_9 ];
-  propagatedBuildInputs = [ hpkgs.llvm-hs  pkgs.llvm_9 ];
+  propagatedBuildInputs = [ hpkgs.llvm-hs  pkgs.llvm_9 pkgs.haskell-language-server ];
   nativeBuildInputs = [ hpkgs.llvm-hs  pkgs.llvm_9 ];
   withHoogle = true;
 }
