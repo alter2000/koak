@@ -13,11 +13,11 @@ import Parser.ParseError
 
 data ASTDerivs = ASTDerivs
   { adNatural   :: Result ASTDerivs AST'
-    adDecimal   :: Result ASTDerivs AST'
+  , adDecimal   :: Result ASTDerivs AST'
   -- , adBool   :: Result ASTDerivs AST'
   -- , adString :: Result ASTDerivs AST'
 
-  , adIgnore :: Result ASTDerivs String
+   , adIgnore :: Result ASTDerivs String
   -- , adElem  :: Result ASTDerivs AST'
 
   , adChar   :: Result ASTDerivs Char
@@ -36,8 +36,8 @@ evalDerivs pos s = d where
      [] -> NoParse $ eofError d
     , adPos    = pos
     -- , adAtom   = pAtom d
-    , adNatural     = pLiteral d
-    , adDecimal     = 
+    , adNatural     = pNatural d
+    , adDecimal     = pDecimal d
     -- , adString = pString d
 
     , adIgnore = pIgnore d
@@ -79,7 +79,7 @@ P pIgnore = concat <$>
 
 {- HLINT ignore "Avoid restricted function" -}
 pLiteral :: ASTDerivs -> Result ASTDerivs AST'
-pLiteral = pNatural <|> pDecimal
+P pLiteral = P adNatural <|> P adDecimal
 
 pNatural :: ASTDerivs -> Result ASTDerivs AST'
 P pNatural = Fix . Literal . read <$> some digit <?> "integer"
