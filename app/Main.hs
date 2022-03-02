@@ -4,7 +4,8 @@ module Main where
 import Control.Exception ( handle )
 import System.Environment ( getArgs )
 
-import Lib.AST ( primEnv, printAST )
+-- import Lib.AST ( primEnv, printAST )
+import Lib
 import Util ( halt, interpret, repl )
 
 main :: IO ()

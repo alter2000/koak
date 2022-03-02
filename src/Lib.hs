@@ -1,6 +1,10 @@
 module Lib
-    ( someFunc
-    ) where
+  where
 
-someFunc :: IO ()
-someFunc = putStrLn "someFunc"
+-- ABSOLUTELY USELESS JUST TO COMPILE
+
+applyRewriteRules = undefined
+runStep = undefined
+printAST = undefined
+primEnv = undefined
+list = undefined

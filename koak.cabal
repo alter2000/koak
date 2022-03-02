@@ -37,6 +37,7 @@ library
       Types.Interp
       Types.Pos
       Types.Valid
+      Util
   other-modules:
       Paths_koak
   hs-source-dirs:
