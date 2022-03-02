@@ -1,7 +1,8 @@
 let
   pkgs = import (builtins.fetchGit {
       url = https://github.com/NixOS/nixpkgs;
-      rev = "521e4d7d13b09bc0a21976b9d19abd197d4e3b1e";
+      rev = "a25df4c2b79c4343bcc72ad671200e5a3e286c41";
+      ref = "nixos-21.11";
     }) {};
 
   hpkgs = pkgs.haskell.packages.ghc8107.override {
@@ -12,10 +13,4 @@ let
 
   koak = hpkgs.callCabal2nix "koak" ./. {};
   koak-static = pkgs.haskell.lib.justStaticExecutables koak;
-in
-
-if pkgs.lib.inNixShell then hpkgs.shellFor {
-  packages = p: with hpkgs; [ koak p.haskell-language-server ];
-  buildInputs = [ pkgs.stack pkgs.llvm_9 ];
-  withHoogle = true;
-} else koak
+in koak
