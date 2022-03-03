@@ -3,7 +3,7 @@ with import ./default.nix;
 let
   pkgs = import (builtins.fetchGit {
       url = https://github.com/NixOS/nixpkgs;
-      rev = "2128d0aa28edef51fd8fef38b132ffc0155595df";
+      rev = "a25df4c2b79c4343bcc72ad671200e5a3e286c41";
       ref = "nixos-21.11";
     }) {};
 
