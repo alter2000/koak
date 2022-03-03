@@ -12,16 +12,25 @@ import Parser.Parser
 import Parser.ParseError
 
 data ASTDerivs = ASTDerivs
-  { adNatural   :: Result ASTDerivs AST'
-  , adDecimal   :: Result ASTDerivs AST'
+  { adNatural     :: Result ASTDerivs AST'
+  , adDecimal     :: Result ASTDerivs AST'
+  , adLiteral     :: Result ASTDerivs AST'
+  , adIdentifier  :: Result ASTDerivs AST'
+  , adPrimary     :: Result ASTDerivs AST'
+  , adFuncCall    :: Result ASTDerivs AST'
+  , adUnaryOp     :: Result ASTDerivs AST'
+  , adPostfix     :: Result ASTDerivs AST'
+  , adExpression  :: Result ASTDerivs AST'
+  , adTerm        :: Result ASTDerivs AST'
+  , adFactor      :: Result ASTDerivs AST'
   -- , adBool   :: Result ASTDerivs AST'
   -- , adString :: Result ASTDerivs AST'
 
-   , adIgnore :: Result ASTDerivs String
+   , adIgnore     :: Result ASTDerivs String
   -- , adElem  :: Result ASTDerivs AST'
 
-  , adChar   :: Result ASTDerivs Char
-  , adPos    :: Pos
+  , adChar        :: Result ASTDerivs Char
+  , adPos         :: Pos
   }
 
 instance Derivs ASTDerivs where
@@ -35,17 +44,24 @@ evalDerivs pos s = d where
      (c:s') -> Parsed c (evalDerivs (nextPos pos c) s') $ nullError d
      [] -> NoParse $ eofError d
     , adPos    = pos
-    -- , adAtom   = pAtom d
     , adNatural     = pNatural d
     , adDecimal     = pDecimal d
-    -- , adString = pString d
+    , adLiteral     = pLiteral d
+    , adIdentifier  = pIdentifier d
+    , adPrimary     = pPrimary d
+    , adFuncCall    = pFuncCall d
+    , adUnaryOp     = pUnaryOp d
+    , adPostfix     = pPostfix d
+    , adExpression  = pExpression d
+    , adTerm        = pTerm d
+    , adFactor      = pFactor d
 
     , adIgnore = pIgnore d
     -- , adElem   = pElem d
     }
 
 pExpr :: ASTDerivs -> Result ASTDerivs AST'
-pExpr = pLiteral
+pExpr = pExpression
 
 parse :: String -> Either ParseError AST'
 parse s = case pExpr $ evalDerivs (Pos "<stdin>" 1 1) s of
@@ -77,9 +93,63 @@ P pIgnore = concat <$>
 --     "." -> unexpected "dotted list" <?> "atom"
 --     _   -> pure (atom tok) <?> "atom"
 
+pBlock :: ASTDerivs -> Result ASTDerivs AST'
+P pBlock = P adExpression
+
+pExpression :: ASTDerivs -> Result ASTDerivs AST'
+P pExpression = do
+  first <- P adTerm
+  foll <- many ((,) <$> oneOf "+-" <*> P adTerm)
+  return (foldl foldFn first foll) <?> "Expression"
+    where
+      foldFn acc ('-', e) = Fix $ BinOp Minus acc e
+      foldFn acc ('+', e) = Fix $ BinOp Plus acc e
+      foldFn _ _ = undefined
+
+pTerm :: ASTDerivs -> Result ASTDerivs AST'
+P pTerm = do
+    first <- P adFactor
+    foll <- many ((,) <$> oneOf "*/" <*> P adFactor)
+    return (foldl foldFn first foll) <?> "Term"
+        where
+            foldFn acc ('/', e) = Fix $ BinOp Divide acc e
+            foldFn acc ('*', e) = Fix $ BinOp Times acc e
+            foldFn _ _ = undefined
+
+pFactor :: ASTDerivs -> Result ASTDerivs AST'
+P pFactor = P adUnaryOp <|> parens (P adExpression) <?> "Factor"
+
+pUnaryOp :: ASTDerivs -> Result ASTDerivs AST'
+P pUnaryOp =
+  ((Fix . UnOp Invert <$ char '!' <|> Fix . UnOp Neg <$ char '-')
+  <*> (P adUnaryOp <|> P adPostfix))
+  <|> P adPostfix
+  <?> "Unary"
+  -- do
+  -- char '!'
+  -- recurs <- P adUnaryOp
+  -- return $
+  --   Fix (UnOp Invert recurs)
+
+pFuncCall :: ASTDerivs -> Result ASTDerivs AST'
+P pFuncCall = do
+  name <- (:) <$> letter <*> many (letter <|> digit)
+  arg <- parens $ optional $ (:) <$> P adExpression <*> many (char ',' *> P adExpression)
+  return $ Fix (Call name [])
+  <?> "Call"
+
+pIdentifier :: ASTDerivs -> Result ASTDerivs AST'
+P pIdentifier = Fix . Identifier <$> ((:) <$> letter <*> many (letter <|> digit)) <?> "Identifier"
+
+pPostfix :: ASTDerivs -> Result ASTDerivs AST'
+P pPostfix = P adPrimary <|> P adFuncCall <?> "Postfix"
+
+pPrimary :: ASTDerivs -> Result ASTDerivs AST'
+P pPrimary = P adLiteral <|> P adIdentifier <?> "Primary"
+
 {- HLINT ignore "Avoid restricted function" -}
 pLiteral :: ASTDerivs -> Result ASTDerivs AST'
-P pLiteral = P adNatural <|> P adDecimal
+P pLiteral = P adDecimal <|> P adNatural <?> "Literal"
 
 pNatural :: ASTDerivs -> Result ASTDerivs AST'
 P pNatural = Fix . Literal . read <$> some digit <?> "integer"

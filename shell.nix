@@ -21,7 +21,7 @@ hpkgs.shellFor {
   packages = p: with hpkgs; [ koak p.haskell-language-server
     p.llvm-hs
   ];
-  buildInputs = [ pkgs.stack pkgs.llvm_9 ];
+  buildInputs = [ pkgs.stack pkgs.llvm_9 pkgs.cabal-install ];
   propagatedBuildInputs = [ hpkgs.llvm-hs  pkgs.llvm_9 pkgs.haskell-language-server ];
   nativeBuildInputs = [ hpkgs.llvm-hs  pkgs.llvm_9 ];
   withHoogle = true;

@@ -1,8 +1,8 @@
 Statement <- kdef* #eof
-kdef <- 'def' defs ';'
-    | expressions ';'
+kdef <- 'def' def ';'
+    | block ';'
 
-def <- prototype expressions
+def <- prototype block
 
 prototype <- (
     'unary' . decimal_const?
@@ -15,29 +15,29 @@ prototype_args <- '(' (identifier ':' type)* ')' ':' type
 
 type <- 'int' | 'double' | 'void'
 
-expressions <- for_expr
+block <- for_expr
     | if_expr
     | while_expr
     | expression (':' expression)*
 
 for_expr <- 'for' identifier '=' expression ','
     identifier '<' expression ','
-    expression 'in' expressions
+    expression
 
-if_expr <- 'if' expression 'then' expressions ('else' expressions)?
-while_expr <- 'while' expression 'do' expressions
+if_expr <- 'if' expression 'then' block ('else' block)?
+while_expr <- 'while' expression 'do' block
 
 expression <- unary (#binop (unary | expression))*
 
-unary <- #unop unary | postfix
+unary <- ('-'|'!') unary | postfix
 
-postfix <- primary call_expr?
+postfix <- primary | call_expr
 
-call_expr <- '(' (expression (',' expression)*)? ')'
+call_expr <- identifier '(' (expression (',' expression)*)? ')'
 
 primary <- identifier
     | literal
-    | '(' expressions ')'
+    | '(' block ')'
 
 identifier <- [a-zA-Z][a-zA-Z0-9]*
 

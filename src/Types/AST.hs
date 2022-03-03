@@ -42,16 +42,17 @@ data ASTF rec
   | UnOp UnFunc rec
   | WhileExpr rec [rec]
   | IfExpr rec [rec] [rec]
+  | Block [rec]
   | Call VarName [rec]
   -- | Function VarName [rec] rec
   | Function { fnName :: VarName
              , fnArgs :: ![VarName]
-             , fnBody :: !rec
+             , fnBody :: ![rec]
              , fnEnv  :: Env }
   | Extern VarName [rec]
   deriving (Eq, Show)
 
-data UnFunc = Neg | Invert | Annotation
+data UnFunc = Neg | Invert
   deriving (Eq, Ord, Show)
 
 data BinFunc
@@ -59,6 +60,11 @@ data BinFunc
   | Minus
   | Times
   | Divide
+  | LessThan
+  | MoreThan
+  | Equality
+  | Difference
+  | Assignment
   deriving (Eq, Ord, Show)
 
 -- | whole AST definition
