@@ -26,12 +26,14 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
+      Lib.Codegen
+      Lib.Lib
       Parser.ASTParser
       Parser.ParseError
       Parser.ParserImpl
       RecursionSchemes
       Types.AST
+      Types.Codegen
       Types.Cofree
       Types.Exceptions
       Types.Interp

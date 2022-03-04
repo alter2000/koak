@@ -22,7 +22,7 @@ import Parser.ASTParser
 import Parser.ParseError
 
 -- TODO
-import Lib
+import Lib.Lib
 
 -- | needs more flesh, usable while inside 'Control.Monad.Except.ExceptT'
 pExcept :: (String -> IO ()) -> IO a -> ParseError -> IO a
