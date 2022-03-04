@@ -79,7 +79,7 @@ data BinFunc
 instance Show1 ASTF where
   -- liftShowsPrec showsPrecFunc showListFunc prio item = shows smth
   liftShowsPrec _ _ _  (Literal s) = shows s
-  liftShowsPrec _ _ _  (Identifier s) = shows ("identifier " ++ s)
+  liftShowsPrec _ _ _  (Identifier s) = shows s
   liftShowsPrec spf _ p (BinOp s a b) = spf p a . shows (" " ++ show s ++ " ") . spf p b
   liftShowsPrec spf _ p (Assignment s val) = shows (s ++ " = ") . spf p val
   liftShowsPrec spf _ p (UnOp  s a)   = shows s . shows " " . spf p a
