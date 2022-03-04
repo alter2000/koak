@@ -81,11 +81,16 @@ instance Show1 ASTF where
   liftShowsPrec _ _ _  (Literal s) = shows s
   liftShowsPrec _ _ _  (Identifier s) = shows s
   liftShowsPrec spf _ p (BinOp s a b) = spf p a . shows s . spf p b
+  liftShowsPrec spf _ p (Assignment s val) = shows (s ++ " = ") . spf p val
   liftShowsPrec spf _ p (UnOp  s a)   = shows s . spf p a
   liftShowsPrec spf slf p (WhileExpr cond block)
     = shows "while " . spf p cond . shows " do " . slf block
-  liftShowsPrec spf slf p (ForExpr cond block)
-    = shows "for " . spf p cond . shows " do " . slf block
+  liftShowsPrec spf slf p (ForExpr assign cond inc block)
+    = shows "for "
+      . spf p assign . shows ", "
+      . spf p cond . shows ", "
+      . spf p inc
+      . shows " do " . slf block
   liftShowsPrec spf slf p (IfExpr cond b1 b2) = shows "if"
     . spf p cond . shows " then " . slf b1 . shows " else " . slf b2
   liftShowsPrec _ slf _ (Call s b) = shows ("Call " <> s <> " with") . slf b
