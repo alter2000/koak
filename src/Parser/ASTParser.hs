@@ -217,7 +217,7 @@ pExtern :: ASTDerivs -> Result ASTDerivs AST'
 P pExtern = do
  string "extern" >> spaces
  name <- identifier
- args <- parens $ many (P adIdentifier <* spaces)
+ args <- parens (P adIdentifier `sepBy` spaces)
  return $ mkExtern name args
 
 pFuncCall :: ASTDerivs -> Result ASTDerivs AST'
