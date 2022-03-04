@@ -1,4 +1,4 @@
-module Lib
+module Lib.Lib
   where
 
 -- ABSOLUTELY USELESS JUST TO COMPILE

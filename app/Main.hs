@@ -5,7 +5,7 @@ import Control.Exception ( handle )
 import System.Environment ( getArgs )
 
 -- import Lib.AST ( primEnv, printAST )
-import Lib
+import Lib.Lib
 import Util ( halt, interpret, repl )
 
 main :: IO ()
