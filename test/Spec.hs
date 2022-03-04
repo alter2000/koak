@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+-- READ TODO.MD P L S
+
 import Test.Hspec
 import Hedgehog
 import qualified Hedgehog.Gen as G

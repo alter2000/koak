@@ -31,6 +31,9 @@ dependencies:
 - haskeline
 # - microlens
 # - conduit
+ghc-options:
+  - -Wall
+  - -Wno-type-defaults
 
 library:
   source-dirs: src
