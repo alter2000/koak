@@ -1,3 +1,7 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveTraversable #-}
 -- | Everything getting us from the language into an AST
 -- and from an AST into a better AST
 module Types.AST
@@ -51,7 +55,9 @@ data ASTF rec
              , fnBody :: ![rec]
              , fnEnv  :: Env }
   | Extern VarName [rec]
-  deriving (Eq, Show)
+  deriving (Eq, Show
+           , Functor, Foldable, Traversable
+  )
 
 data UnFunc = Neg | Invert
   deriving (Eq, Ord, Show)
@@ -68,89 +74,32 @@ data BinFunc
   | Assignment
   deriving (Eq, Ord, Show)
 
--- | whole AST definition
--- data ASTF r = Atom !VarName
---             -- | Int  !Integer
---             | Bool !Bool
---             -- | Real !Rational
---             | Str  !String
---             | List ![r]
---             | DottedList ![r] !r
---             -- lambda grabs closure from current env (a la python)
---             | Builtin (Func Interp)
---             | Lambda { fnArgs :: ![VarName]
---                      , fnBody :: !r
---                      , fnEnv  :: Env }
---             deriving (Show, Eq)
-
-newtype Func m = Func { getFn :: [AST'] -> m AST' }
-
-instance Show (Func m) where show _ = "#<func>"
--- | since 'Func' is only used by primitives and 'M.lookup' is trusted
-instance   Eq (Func m) where _ == _ = True
-
 -- Instances {{{
-instance Functor ASTF where
-  -- fmap _  (Str a) = Str  a
-  -- fmap _  (Int a) = Int a
-  -- fmap _ (Real a) = Real a
-
-instance Foldable ASTF where
-  -- foldMap _  (Str _) = mempty
-  -- foldMap _  (Int _) = mempty
-  -- foldMap _ (Real _) = mempty
-
-instance Traversable ASTF where
-  -- traverse _  (Str a) = pure $ Str a
-  -- traverse _  (Int a) = pure $ Int a
-  -- traverse _ (Real a) = pure $ Real a
-
--- instance Show1 ASTF where
---   liftShowsPrec _ _ _  (Literal s) = shows s
---   liftShowsPrec _ _ _  (Identifier s) = shows s
---   liftShowsPrec arg1 arg2 arg3  (BinOp s a b)
---     = shows s
---     . (liftShowsPrec arg1 arg2 arg3 a)
---     . (liftShowsPrec arg1 arg2 arg3 b)
---   liftShowsPrec arg1 arg2 arg3  (UnOp s a)
---     = shows s
---     . (liftShowsPrec arg1 arg2 arg3 a)
---   liftShowsPrec arg1 arg2 arg3  (WhileExpr cond block)
---     = (liftShowsPrec arg1 arg2 arg3 cond)
---     . (foldl ((.) . liftShowsPrec arg1 arg2 arg3) block)
---   liftShowsPrec arg1 arg2 arg3  (IfExpr cond block1 block2)
---     = (liftShowsPrec arg1 arg2 arg3 cond)
---     . (foldl ((.) . liftShowsPrec arg1 arg2 arg3) block1)
---     . (foldl ((.) . liftShowsPrec arg1 arg2 arg3) block2)
---   liftShowsPrec arg1 arg2 arg3  (Call s block)
---     = shows s
---     . (foldl ((.) . liftShowsPrec arg1 arg2 arg3) block)
---   liftShowsPrec _ _ _ _ = shows "Function def or Extern"
-
 
 instance Show1 ASTF where
+  -- liftShowsPrec showsPrecFunc showListFunc prio item = shows smth
   liftShowsPrec _ _ _  (Literal s) = shows s
   liftShowsPrec _ _ _  (Identifier s) = shows s
-  liftShowsPrec arg1 arg2 arg3  (BinOp s a b)
-    = shows s
-  liftShowsPrec arg1 arg2 arg3  (UnOp s a)
-    = shows s
-  liftShowsPrec arg1 arg2 arg3  (WhileExpr cond block)
-    = shows "WhileExpr"
-  liftShowsPrec arg1 arg2 arg3  (IfExpr cond block1 block2)
-    = shows "IfExpr"
-  liftShowsPrec arg1 arg2 arg3  (Call s block)
-    = shows (s ++ " Call")
-  liftShowsPrec _ _ _ _ = shows "Function def or Extern"
-
+  liftShowsPrec spf _ p (BinOp s a b) = spf p a . shows s . spf p b
+  liftShowsPrec spf _ p (UnOp  s a)   = shows s . spf p a
+  liftShowsPrec spf slf p (WhileExpr cond block)
+    = shows "while " . spf p cond . shows " do " . slf block
+  liftShowsPrec spf slf p (ForExpr cond block)
+    = shows "for " . spf p cond . shows " do " . slf block
+  liftShowsPrec spf slf p (IfExpr cond b1 b2) = shows "if"
+    . spf p cond . shows " then " . slf b1 . shows " else " . slf b2
+  liftShowsPrec _ slf _ (Call s b) = shows ("Call " <> s <> " with") . slf b
+  liftShowsPrec _ slf _ (Block b) = shows " { " . slf b . shows " } "
+  liftShowsPrec _ _ _ Function{} = shows "Function def"
+  liftShowsPrec _ _ _ Extern{} = shows "External var"
 
 showList' :: ShowS -> (a -> b -> ShowS) -> a -> [b] -> ShowS
 showList' end pf p =
   fmap (pf p) >>> L.intersperse (showChar ' ') >>> foldr (.) end
 
 instance Eq1 ASTF where
-  -- liftEq _  (Int a)  (Int b) = a == b
-  -- liftEq _  (Str a)  (Str b) = a == b
+  liftEq _ (Literal a)  (Literal b) = a == b
+  liftEq _ (Identifier a) (Identifier b) = a == b
   liftEq _ _ _ = False
 -- }}}
 
