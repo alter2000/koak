@@ -17,7 +17,7 @@ import qualified Data.Map as M
 
 import Types.Exceptions ( HALError )
 import Types.AST
-import Parser.AST
+import Parser.ASTParser
 -- import Lib.AST
 import Parser.ParseError
 

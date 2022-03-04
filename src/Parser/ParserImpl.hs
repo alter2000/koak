@@ -1,4 +1,4 @@
-module Parser.Parser where
+module Parser.ParserImpl where
 -- TODO: TemplateHaskell QQ?
 
 import Data.Char

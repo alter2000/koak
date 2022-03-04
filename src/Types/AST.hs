@@ -50,7 +50,6 @@ data ASTF rec
   | IfExpr rec [rec] [rec]
   | Call VarName [rec]
   | Assignment VarName rec
-  -- | Function VarName [rec] rec
   | Function { fnName :: VarName
              , fnArgs :: ![VarName]
              , fnBody :: ![rec]
@@ -59,6 +58,23 @@ data ASTF rec
   deriving (Eq, Show
            , Functor, Foldable, Traversable
   )
+
+
+data KalExpr rec
+  = Float Double
+  | BinOp Op rec rec
+  | Var String
+  | Call Name [rec]
+  | Function Name [rec] rec
+  | Extern Name [rec]
+  deriving (Eq, Ord, Show)
+
+data Op
+  = Plus
+  | Minus
+  | Times
+  | Divide
+  deriving (Eq, Ord, Show)
 
 data UnFunc = Neg | Invert
   deriving (Eq, Ord, Show)

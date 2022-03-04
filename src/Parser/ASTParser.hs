@@ -1,4 +1,4 @@
-module Parser.AST
+module Parser.ASTParser
   where
 
 import Control.Applicative
@@ -9,7 +9,7 @@ import Data.Maybe
 import Types.AST
 import RecursionSchemes
 import Types.Pos
-import Parser.Parser
+import Parser.ParserImpl
 import Parser.ParseError
 
 data ASTDerivs = ASTDerivs
@@ -47,19 +47,19 @@ evalDerivs pos s = d where
      (c:s') -> Parsed c (evalDerivs (nextPos pos c) s') $ nullError d
      [] -> NoParse $ eofError d
     , adPos    = pos
-    , adNatural     = pNatural d
-    , adDecimal     = pDecimal d
-    , adLiteral     = pLiteral d
-    , adIdentifier  = pIdentifier d
-    , adPrimary     = pPrimary d
-    , adFuncCall    = pFuncCall d
-    , adUnaryOp     = pUnaryOp d
-    , adPostfix     = pPostfix d
-    , adExpression  = pExpression d
-    , adTerm        = pTerm d
-    , adFactor      = pFactor d
-    , adBlock       = pBlock d
-    , adAssign      = pAssignment d
+    -- , adNatural     = pNatural d
+    -- , adDecimal     = pDecimal d
+    -- , adLiteral     = pLiteral d
+    -- , adIdentifier  = pIdentifier d
+    -- , adPrimary     = pPrimary d
+    -- , adFuncCall    = pFuncCall d
+    -- , adUnaryOp     = pUnaryOp d
+    -- , adPostfix     = pPostfix d
+    -- , adExpression  = pExpression d
+    -- , adTerm        = pTerm d
+    -- , adFactor      = pFactor d
+    -- , adBlock       = pBlock d
+    -- , adAssign      = pAssignment d
 
     , adIgnore = pIgnore d
     -- , adElem   = pElem d
@@ -83,20 +83,6 @@ pIgnore :: ASTDerivs -> Result ASTDerivs String
 P pIgnore = concat <$>
     (optional spaces *> many (P pComment <* spaces))
               <?> "non-code"
-
--- pElem :: ASTDerivs -> Result ASTDerivs AST'
--- P pElem = asum [P adHash, P adInt, P adString, P adQuote, P adAtom, P adList]
-
--- | Atoms are strings of alphanumeric characters (+ some symbols)
--- starting with a letter or symbol
--- pAtom :: ASTDerivs -> Result ASTDerivs AST'
--- P pAtom = do
---   prefix <- some $ alphaNum <|> oneOf "?!$%^&*_+-=#.<>/" <?> "atom"
---   middle <- many $ alphaNum <|> oneOf "?!$%^&*_+-=#,.<>/" <?> "atom"
---   let tok = prefix <> middle
---   case tok of
---     "." -> unexpected "dotted list" <?> "atom"
---     _   -> pure (atom tok) <?> "atom"
 
 pBlock :: ASTDerivs -> Result ASTDerivs AST'
 P pBlock = pIfExpr <|> pForExpr <|> pWhileExpr <|> Fix . Block <$> blockCont
