@@ -79,10 +79,10 @@ data BinFunc
 instance Show1 ASTF where
   -- liftShowsPrec showsPrecFunc showListFunc prio item = shows smth
   liftShowsPrec _ _ _  (Literal s) = shows s
-  liftShowsPrec _ _ _  (Identifier s) = shows s
-  liftShowsPrec spf _ p (BinOp s a b) = spf p a . shows s . spf p b
+  liftShowsPrec _ _ _  (Identifier s) = shows ("identifier " ++ s)
+  liftShowsPrec spf _ p (BinOp s a b) = spf p a . shows (" " ++ show s ++ " ") . spf p b
   liftShowsPrec spf _ p (Assignment s val) = shows (s ++ " = ") . spf p val
-  liftShowsPrec spf _ p (UnOp  s a)   = shows s . spf p a
+  liftShowsPrec spf _ p (UnOp  s a)   = shows s . shows " " . spf p a
   liftShowsPrec spf slf p (WhileExpr cond block)
     = shows "while " . spf p cond . shows " do " . slf block
   liftShowsPrec spf slf p (ForExpr assign cond inc block)
@@ -93,8 +93,8 @@ instance Show1 ASTF where
       . shows " do " . slf block
   liftShowsPrec spf slf p (IfExpr cond b1 b2) = shows "if"
     . spf p cond . shows " then " . slf b1 . shows " else " . slf b2
-  liftShowsPrec _ slf _ (Call s b) = shows ("Call " <> s <> " with") . slf b
-  liftShowsPrec _ slf _ (Block b) = shows " { " . slf b . shows " } "
+  liftShowsPrec _ slf _ (Call s b) = shows ("Call " <> s <> " with ") . slf b
+  liftShowsPrec _ slf _ (Block b) = shows "block " . slf b
   liftShowsPrec spf slf p (Function name args body) = shows ("Function def " ++ name)
     . slf args . shows ": " . spf p body
   liftShowsPrec _ slf _ (Extern name args) = shows ("Extern def " ++ name)
