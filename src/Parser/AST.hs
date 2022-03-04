@@ -4,6 +4,7 @@ module Parser.AST
 import Control.Applicative
 import Data.Functor
 import Data.Foldable
+import Data.Maybe
 
 import Types.AST
 import RecursionSchemes
@@ -23,6 +24,7 @@ data ASTDerivs = ASTDerivs
   , adExpression  :: Result ASTDerivs AST'
   , adTerm        :: Result ASTDerivs AST'
   , adFactor      :: Result ASTDerivs AST'
+  , adBlock       :: Result ASTDerivs AST'
   -- , adBool   :: Result ASTDerivs AST'
   -- , adString :: Result ASTDerivs AST'
 
@@ -55,6 +57,7 @@ evalDerivs pos s = d where
     , adExpression  = pExpression d
     , adTerm        = pTerm d
     , adFactor      = pFactor d
+    , adBlock       = pBlock d
 
     , adIgnore = pIgnore d
     -- , adElem   = pElem d
@@ -94,7 +97,21 @@ P pIgnore = concat <$>
 --     _   -> pure (atom tok) <?> "atom"
 
 pBlock :: ASTDerivs -> Result ASTDerivs AST'
-P pBlock = P adExpression
+P pBlock = pIfExpr <|> Fix . Block <$> blockCont <?> "Block"
+  where
+    blockCont :: Parser ASTDerivs [AST']
+    blockCont = (:) <$> P adExpression <*> many (char ':' *> P adExpression)
+
+    pIfExpr :: Parser ASTDerivs AST'
+    pIfExpr = do
+      string "if" >> spaces
+      cond <- P adExpression
+      string "then" >> spaces
+      thenBody <- blockCont
+      elseBody <- optional (spaces *> string "else" *> spaces *> blockCont)
+      return $ Fix $ IfExpr cond thenBody (fromMaybe [] elseBody)
+
+-- TODO: add For and while
 
 pExpression :: ASTDerivs -> Result ASTDerivs AST'
 P pExpression = do
@@ -145,7 +162,7 @@ pPostfix :: ASTDerivs -> Result ASTDerivs AST'
 P pPostfix = P adPrimary <|> P adFuncCall <?> "Postfix"
 
 pPrimary :: ASTDerivs -> Result ASTDerivs AST'
-P pPrimary = P adLiteral <|> P adIdentifier <?> "Primary"
+P pPrimary = P adLiteral <|> P adIdentifier <|> parens (P adBlock) <?> "Primary"
 
 {- HLINT ignore "Avoid restricted function" -}
 pLiteral :: ASTDerivs -> Result ASTDerivs AST'

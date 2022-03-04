@@ -40,9 +40,10 @@ data ASTF rec
   | Identifier VarName
   | BinOp BinFunc rec rec
   | UnOp UnFunc rec
+  | Block [rec]
+  | ForExpr rec [rec]
   | WhileExpr rec [rec]
   | IfExpr rec [rec] [rec]
-  | Block [rec]
   | Call VarName [rec]
   -- | Function VarName [rec] rec
   | Function { fnName :: VarName
