@@ -223,7 +223,7 @@ P pExtern = do
 pFuncCall :: ASTDerivs -> Result ASTDerivs AST'
 P pFuncCall = do
   name <- identifier
-  arg <- parens $ optional $ (:) <$> P adExpression <*> many (char ',' *> P adExpression)
+  arg <- parens $ optional $ P adExpression `sepBy` (spaces >> char ',' >> spaces)
   return $ mkCall name (fromMaybe [] arg)
   <?> "Call"
 
