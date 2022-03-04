@@ -201,6 +201,9 @@ letter = satisfy anyChar isAlpha <?> "letter"
 alphaNum :: Derivs d => Parser d Char
 alphaNum = satisfy anyChar isAlphaNum <?> "letter or digit"
 
+identifier :: Derivs d => Parser d [Char]
+identifier = (:) <$> letter <*> many (letter <|> digit)
+
 -- | Match any digit.
 digit :: Derivs d => Parser d Char
 digit = satisfy anyChar isDigit <?> "digit"

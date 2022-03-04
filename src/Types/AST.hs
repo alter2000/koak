@@ -50,31 +50,15 @@ data ASTF rec
   | IfExpr rec [rec] [rec]
   | Call VarName [rec]
   | Assignment VarName rec
-  | Function { fnName :: VarName
-             , fnArgs :: ![VarName]
-             , fnBody :: ![rec]
-             , fnEnv  :: Env }
+  | Function VarName [rec] rec
+  -- | Function { fnName :: VarName
+  --            , fnArgs :: ![VarName]
+  --            , fnBody :: ![rec]
+  --            , fnEnv  :: Env }
   | Extern VarName [rec]
   deriving (Eq, Show
            , Functor, Foldable, Traversable
   )
-
-
-data KalExpr rec
-  = Float Double
-  | BinOp Op rec rec
-  | Var String
-  | Call Name [rec]
-  | Function Name [rec] rec
-  | Extern Name [rec]
-  deriving (Eq, Ord, Show)
-
-data Op
-  = Plus
-  | Minus
-  | Times
-  | Divide
-  deriving (Eq, Ord, Show)
 
 data UnFunc = Neg | Invert
   deriving (Eq, Ord, Show)
@@ -111,8 +95,10 @@ instance Show1 ASTF where
     . spf p cond . shows " then " . slf b1 . shows " else " . slf b2
   liftShowsPrec _ slf _ (Call s b) = shows ("Call " <> s <> " with") . slf b
   liftShowsPrec _ slf _ (Block b) = shows " { " . slf b . shows " } "
-  liftShowsPrec _ _ _ Function{} = shows "Function def"
-  liftShowsPrec _ _ _ Extern{} = shows "External var"
+  liftShowsPrec spf slf p (Function name args body) = shows ("Function def " ++ name)
+    . slf args . shows ": " . spf p body
+  liftShowsPrec _ slf _ (Extern name args) = shows ("Extern def " ++ name)
+    . slf args
 
 showList' :: ShowS -> (a -> b -> ShowS) -> a -> [b] -> ShowS
 showList' end pf p =
