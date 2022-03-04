@@ -15,10 +15,10 @@ import Data.List as L
 import qualified Data.Map.Strict as M
 
 import RecursionSchemes ( Fix(..) )
-import Types.Cofree as C
--- import Types.Pos
 import Control.Monad.State
 import Control.Monad.Reader
+-- import Types.Cofree as C
+-- import Types.Pos
 
 type VarName = String
 type Interp = StateT Env (ReaderT Env IO)
@@ -114,20 +114,40 @@ type AST' = Fix ASTF
 
 -- Smart constructors {{{
 
-newtype ASTWithHist =
-  ASTWithHist { runASTWithHist :: Cofree ASTF [ASTWithHist] }
+mkLiteral :: Double -> AST'
+mkLiteral = Fix . Literal
 
--- | Get an AST, handle said AST in such a way that it can see its
---   history, finally return an @IO ()@
--- type AST' = Cofree ASTF Pos
+mkIdentifier :: VarName -> AST'
+mkIdentifier = Fix . Identifier
 
--- node :: f (Cofree f Pos) -> Cofree f Pos
--- node a = nPos C.:< a
+mkBinOp :: BinFunc -> AST' -> AST' -> AST'
+mkBinOp = ((Fix .) .) . BinOp
 
--- str :: String -> AST'
--- str = Fix . Str
+mkUnOp :: UnFunc -> AST' -> AST'
+mkUnOp = (Fix .) . UnOp
 
--- int :: Integer -> AST'
--- int = Fix . Int
+mkBlock :: [AST'] -> AST'
+mkBlock = Fix . Block
+
+mkForExpr :: AST' -> AST' -> AST' -> [AST'] -> AST'
+mkForExpr = (((Fix .) .) .) . ForExpr
+
+mkWhileExpr :: AST' -> [AST'] -> AST'
+mkWhileExpr = (Fix .) . WhileExpr
+
+mkIfExpr :: AST' -> [AST'] -> [AST'] -> AST'
+mkIfExpr = ((Fix .) .) . IfExpr
+
+mkCall :: VarName -> [AST'] -> AST'
+mkCall = (Fix .) . Call
+
+mkAssignment :: VarName -> AST' -> AST'
+mkAssignment = (Fix .) . Assignment
+
+mkFunction :: VarName -> [AST'] -> AST' -> AST'
+mkFunction = ((Fix .) .) . Function
+
+mkExtern :: VarName -> [AST'] -> AST'
+mkExtern = (Fix .) . Extern
 
 -- }}}

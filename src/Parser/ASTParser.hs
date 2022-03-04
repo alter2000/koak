@@ -2,13 +2,10 @@ module Parser.ASTParser
   where
 
 import Control.Applicative
-import Data.Functor
-import Data.Foldable
 import Data.Maybe
 
-import Types.AST
-import RecursionSchemes
 import Types.Pos
+import Types.AST
 import Parser.ParserImpl
 import Parser.ParseError
 
@@ -68,43 +65,6 @@ evalDerivs pos s = d where
     -- , adElem   = pElem d
     }
 
-
-mkLiteral :: Double -> AST'
-mkLiteral = Fix . Literal
-
-mkIdentifier :: VarName -> AST'
-mkIdentifier = Fix . Identifier
-
-mkBinOp :: BinFunc -> AST' -> AST' -> AST'
-mkBinOp = ((Fix .) .) . BinOp
-
-mkUnOp :: UnFunc -> AST' -> AST'
-mkUnOp = (Fix .) . UnOp
-
-mkBlock :: [AST'] -> AST'
-mkBlock = Fix . Block
-
-mkForExpr :: AST' -> AST' -> AST' -> [AST'] -> AST'
-mkForExpr = (((Fix .) .) .) . ForExpr
-
-mkWhileExpr :: AST' -> [AST'] -> AST'
-mkWhileExpr = (Fix .) . WhileExpr
-
-mkIfExpr :: AST' -> [AST'] -> [AST'] -> AST'
-mkIfExpr = ((Fix .) .) . IfExpr
-
-mkCall :: VarName -> [AST'] -> AST'
-mkCall = (Fix .) . Call
-
-mkAssignment :: VarName -> AST' -> AST'
-mkAssignment = (Fix .) . Assignment
-
-mkFunction :: VarName -> [AST'] -> AST' -> AST'
-mkFunction = ((Fix .) .) . Function
-
-mkExtern :: VarName -> [AST'] -> AST'
-mkExtern = (Fix .) . Extern
-
 pExpr :: ASTDerivs -> Result ASTDerivs AST'
 pExpr = pTopLevel
 
@@ -162,8 +122,8 @@ pAssignment :: ASTDerivs -> Result ASTDerivs AST'
 P pAssignment = do
   str <- identifier
   char '='
-  exp <- P adExpression
-  return $ mkAssignment str exp
+  expr <- P adExpression
+  return $ mkAssignment str expr
 
 pTopLevel :: ASTDerivs -> Result ASTDerivs AST'
 P pTopLevel = mkBlock <$> (P adDefn `sepBy` (spaces >> char ';' >> spaces))
