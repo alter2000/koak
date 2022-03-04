@@ -25,6 +25,7 @@ data ASTDerivs = ASTDerivs
   , adTerm        :: Result ASTDerivs AST'
   , adFactor      :: Result ASTDerivs AST'
   , adBlock       :: Result ASTDerivs AST'
+  , adAssign      :: Result ASTDerivs AST'
   -- , adBool   :: Result ASTDerivs AST'
   -- , adString :: Result ASTDerivs AST'
 
@@ -58,6 +59,7 @@ evalDerivs pos s = d where
     , adTerm        = pTerm d
     , adFactor      = pFactor d
     , adBlock       = pBlock d
+    , adAssign      = pAssignment d
 
     , adIgnore = pIgnore d
     -- , adElem   = pElem d
@@ -97,7 +99,8 @@ P pIgnore = concat <$>
 --     _   -> pure (atom tok) <?> "atom"
 
 pBlock :: ASTDerivs -> Result ASTDerivs AST'
-P pBlock = pIfExpr <|> Fix . Block <$> blockCont <?> "Block"
+P pBlock = pIfExpr <|> pForExpr <|> pWhileExpr <|> Fix . Block <$> blockCont
+  <?> "Block"
   where
     blockCont :: Parser ASTDerivs [AST']
     blockCont = (:) <$> P adExpression <*> many (char ':' *> P adExpression)
@@ -111,10 +114,33 @@ P pBlock = pIfExpr <|> Fix . Block <$> blockCont <?> "Block"
       elseBody <- optional (spaces *> string "else" *> spaces *> blockCont)
       return $ Fix $ IfExpr cond thenBody (fromMaybe [] elseBody)
 
--- TODO: add For and while
+    pForExpr :: Parser ASTDerivs AST'
+    pForExpr = do
+      string "for" *> spaces
+      assignment <- P adAssign
+      string "," >> spaces
+      cond <- P adExpression
+      string "," >> spaces
+      inc <- P adExpression
+      spaces
+      Fix . ForExpr assignment cond inc <$> blockCont
+
+    pWhileExpr :: Parser ASTDerivs AST'
+    pWhileExpr = do
+      string "while" >> spaces
+      cond <- P adExpression
+      string "do" >> spaces
+      Fix . WhileExpr cond <$> blockCont
+
+pAssignment :: ASTDerivs -> Result ASTDerivs AST'
+P pAssignment = do
+  str <- (:) <$> letter <*> many (letter <|> digit)
+  char '='
+  exp <- P adExpression
+  return $ Fix (Assignment str exp)
 
 pExpression :: ASTDerivs -> Result ASTDerivs AST'
-P pExpression = do
+P pExpression = P adAssign <|> do
   first <- P adTerm
   foll <- many ((,) <$> oneOf "+-" <*> P adTerm)
   return (foldl foldFn first foll) <?> "Expression"

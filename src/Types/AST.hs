@@ -41,10 +41,11 @@ data ASTF rec
   | BinOp BinFunc rec rec
   | UnOp UnFunc rec
   | Block [rec]
-  | ForExpr rec [rec]
+  | ForExpr rec rec rec [rec]
   | WhileExpr rec [rec]
   | IfExpr rec [rec] [rec]
   | Call VarName [rec]
+  | Assignment VarName rec
   -- | Function VarName [rec] rec
   | Function { fnName :: VarName
              , fnArgs :: ![VarName]
@@ -65,7 +66,6 @@ data BinFunc
   | MoreThan
   | Equality
   | Difference
-  | Assignment
   deriving (Eq, Ord, Show)
 
 -- | whole AST definition
