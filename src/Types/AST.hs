@@ -31,7 +31,6 @@ data ASTF rec
   | Identifier VarName
   | BinOp BinFunc rec rec
   | UnOp UnFunc rec
-  | Block [rec]
   | ForExpr VarName rec rec rec rec
   | WhileExpr rec rec
   | IfExpr rec rec rec
@@ -80,7 +79,6 @@ instance Show1 ASTF where
   liftShowsPrec spf _ p (IfExpr cond b1 b2) = shows "if"
     . spf p cond . shows " then " . spf p b1 . shows " else " . spf p b2
   liftShowsPrec _ slf _ (Call s b) = shows ("Call " <> s <> " with ") . slf b
-  liftShowsPrec _ slf _ (Block b) = shows "block " . slf b
   liftShowsPrec spf _ p (Function name args body) =
     shows ("Fn def " ++ name) . showList args . shows ": " . spf p body
   liftShowsPrec _ _ _ (Extern name args) =
@@ -95,7 +93,6 @@ instance Eq1 ASTF where
   liftEq _ (Identifier a) (Identifier b) = a == b
   liftEq f (BinOp f1 a1 b1) (BinOp f2 a2 b2) = f1 == f2 && f a1 a2 && f b1 b2
   liftEq f (UnOp f1 a1) (UnOp f2 a2) = f1 == f2 && f a1 a2
-  liftEq f (Block a) (Block b) = liftEq f a b
   liftEq f (ForExpr v1 a1 e1 i1 b1) (ForExpr v2 a2 e2 i2 b2) = v1 == v2 && f a1 a2 && f e1 e2 && f i1 i2 && f b1 b2
   liftEq f (WhileExpr c1 e1) (WhileExpr c2 e2) = f c1 c2 && f e1 e2
   liftEq f (IfExpr c1 t1 e1) (IfExpr c2 t2 e2) = f c1 c2 && f t1 t2 && f e1 e2
@@ -121,9 +118,6 @@ mkBinOp = ((Fix .) .) . BinOp
 
 mkUnOp :: UnFunc -> AST' -> AST'
 mkUnOp = (Fix .) . UnOp
-
-mkBlock :: [AST'] -> AST'
-mkBlock = Fix . Block
 
 mkForExpr :: VarName -> AST' -> AST' -> AST' -> AST' -> AST'
 mkForExpr = ((((Fix .) .) .) .) . ForExpr

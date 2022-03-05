@@ -73,11 +73,11 @@ handleInput i  | filter (not . isSpace) i == "" = pure True
     pp <- getExternalPrint
     either (liftIO . pExcept pp (pure True)) threadMod (parse i)
 
-threadMod :: AST' -> Repl Bool
+threadMod :: [AST'] -> Repl Bool
 threadMod ast = do
   mod <- lift get
   (r, m') <- liftIO $ handle (except >>> (>> pure (True, mod))) $ do
-    m' <- codegen mod [ast]
+    m' <- codegen mod ast
     pure (True, m')
   lift (put m') >> pure r
 

@@ -8,6 +8,7 @@ import Types.Pos
 import Types.AST
 import Parser.ParserImpl
 import Parser.ParseError
+import Debug.Trace (trace)
 
 data ASTDerivs = ASTDerivs
   { adNatural     :: Result ASTDerivs AST'
@@ -21,7 +22,7 @@ data ASTDerivs = ASTDerivs
   , adExpression  :: Result ASTDerivs AST'
   , adTerm        :: Result ASTDerivs AST'
   , adFactor      :: Result ASTDerivs AST'
-  , adBlock       :: Result ASTDerivs AST'
+  , adFlowCont    :: Result ASTDerivs AST'
   , adAssign      :: Result ASTDerivs AST'
   , adExtern      :: Result ASTDerivs AST'
   , adFuncDecl    :: Result ASTDerivs AST'
@@ -29,7 +30,8 @@ data ASTDerivs = ASTDerivs
   , adIfExpr      :: Result ASTDerivs AST'
   , adForExpr     :: Result ASTDerivs AST'
   , adWhileExpr   :: Result ASTDerivs AST'
-  , adComp        ::  Result ASTDerivs AST'
+  , adComp        :: Result ASTDerivs AST'
+  , adTopLevel    :: Result ASTDerivs [AST']
 
   , adIgnore     :: Result ASTDerivs String
 
@@ -59,7 +61,7 @@ evalDerivs pos s = d where
     , adExpression  = pExpression d
     , adTerm        = pTerm d
     , adFactor      = pFactor d
-    , adBlock       = pBlock d
+    , adFlowCont    = pFlowCont d
     , adAssign      = pAssignment d
     , adExtern      = pExtern d
     , adFuncDecl    = pFuncDecl d
@@ -68,15 +70,16 @@ evalDerivs pos s = d where
     , adForExpr     = pForExpr d
     , adWhileExpr   = pWhileExpr d
     , adComp        = pComp d
+    , adTopLevel    = pTopLevel d
 
     , adIgnore = pIgnore d
     -- , adElem   = pElem d
     }
 
-pExpr :: ASTDerivs -> Result ASTDerivs AST'
-pExpr = pForExpr
+pExpr :: ASTDerivs -> Result ASTDerivs [AST']
+P pExpr = P adTopLevel <* eof'
 
-parse :: String -> Either ParseError AST'
+parse :: String -> Either ParseError [AST']
 parse s = case pExpr $ evalDerivs (Pos "<stdin>" 1 1) s of
     Parsed v _ _ -> Right v
     NoParse e -> Left e
@@ -99,25 +102,26 @@ P pAssignment = do
   expr <- P adExpression
   return $ mkAssignment str expr
 
-pTopLevel :: ASTDerivs -> Result ASTDerivs AST'
-P pTopLevel = mkBlock <$> (P adDefn `sepBy` (spaces >> char ';' >> spaces))
+pTopLevel :: ASTDerivs -> Result ASTDerivs [AST']
+P pTopLevel = P adDefn `sepBy` (spaces >> char ';' >> spaces)
 
 pDefn :: ASTDerivs -> Result ASTDerivs AST'
-P pDefn = P adExtern <|> P adFuncDecl <|> P adBlock <|> P adExpression
+P pDefn = P adExtern <|> P adFuncDecl <|> P adExpression
 
-pBlock :: ASTDerivs -> Result ASTDerivs AST'
-P pBlock = P adIfExpr <|> P adForExpr <|> P adWhileExpr {- <|> mkBlock <$> blockCont
+pFlowCont :: ASTDerivs -> Result ASTDerivs AST'
+P pFlowCont = P adIfExpr {- <|> P adForExpr -} {- <|> P adWhileExpr <|> mkBlock <$> blockCont
   <?> "Block"
   where
     blockCont :: Parser ASTDerivs [AST']
     blockCont = (:) <$> P adExpression <*> many (char ':' *> P adExpression) -}
 
 pIfExpr :: ASTDerivs -> Result ASTDerivs AST'
-P pIfExpr = do
+P pIfExpr = trace "azef" $ do
   string "if" >> some space
   cond <- P adExpression <* some space
   string "then" >> some space
   thenBody <- P adExpression
+  string "else" >> some space
   elseBody <- P adExpression
   return $ mkIfExpr cond thenBody elseBody
 
@@ -125,9 +129,9 @@ pForExpr :: ASTDerivs -> Result ASTDerivs AST'
 P pForExpr = mkForExpr
   <$> (string "for" *> some space *> identifier)
   <*> ((spaces *> char '=' *> spaces) *> P adExpression)
-  <*> ((string "," >> spaces) *> P adExpression)
-  <*> ((string "," >> spaces) *> P adExpression)
-  <*> ((some space >> string "in" >> some space) *> P adExpression)
+  <*> ((string "," *> spaces) *> P adExpression)
+  <*> ((string "," *> spaces) *> P adExpression)
+  <*> ((some space *> string "in" *> some space) *> P adExpression)
   <?> "FOR"
 
 pWhileExpr :: ASTDerivs -> Result ASTDerivs AST'
@@ -168,10 +172,12 @@ P pComp = do
     "==" -> mkBinOp Equality a b
     "!=" -> mkBinOp Difference a b
     s -> mkBinOp (Err s) a b
+  <|> P adFactor
   <?> "Comp"
 
 pFactor :: ASTDerivs -> Result ASTDerivs AST'
-P pFactor = P adUnaryOp <|> parens (P adExpression) <?> "Factor"
+P pFactor = P adFlowCont <|> P adUnaryOp <|> parens (P adExpression) <?> "Factor"
+
 pUnaryOp :: ASTDerivs -> Result ASTDerivs AST'
 P pUnaryOp =
   ((mkUnOp Invert <$ char '!' <|> mkUnOp Neg <$ char '-')
@@ -206,7 +212,7 @@ P pFuncCall = do
   <?> "Call"
 
 pPrimary :: ASTDerivs -> Result ASTDerivs AST'
-P pPrimary = P adLiteral <|> P adIdentifier <|> parens (P adExpression) <?> "Primary"
+P pPrimary = P adLiteral <|> P adIdentifier <?> "Primary"
 
 pIdentifier :: ASTDerivs -> Result ASTDerivs AST'
 P pIdentifier = mkIdentifier <$> identifier <?> "Identifier"

@@ -8,6 +8,7 @@ import Control.Monad
 
 import Types.Pos
 import Parser.ParseError
+import Debug.Trace (trace)
 
 -- Types {{{
 -- | Wrapper type for our parser, just '(->)' 'Derivs'.
@@ -191,7 +192,7 @@ noneOf chs = satisfy anyChar (`notElem` chs)
 
 -- | @string s@ matches all the characters in @s@ in sequence.
 string :: Derivs d => String -> Parser d String
-string s@(x:xs) = (:) <$> char x <*> string xs <?> show s
+string s@(x:xs) = trace s ((:) <$> char x <*> string xs <?> show s)
 string [] = pure []
 
 -- | @stringFrom ss@ matches any string in @ss@. If any strings in @ss@ are
@@ -208,7 +209,10 @@ alphaNum :: Derivs d => Parser d Char
 alphaNum = satisfy anyChar isAlphaNum <?> "letter or digit"
 
 identifier :: Derivs d => Parser d [Char]
-identifier = (:) <$> letter <*> many (letter <|> digit)
+identifier = satisfy ((:) <$> letter <*> many (letter <|> digit))
+  $ flip notElem ks
+  where
+    ks = ["def", "for", "extern", "in", "then", "if", "else", "while", "do"]
 
 -- | Match any digit.
 digit :: Derivs d => Parser d Char
