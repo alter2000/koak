@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Lib.Codegen where
 
@@ -48,7 +47,7 @@ getvar :: String -> Codegen Operand
 getvar var = do
   syms <- gets symtab
   case Map.lookup var syms of
-    Just x  -> return x
+    Just x  -> pure x
     Nothing -> error $ "Local variable not in scope: " <> show var
 
 
