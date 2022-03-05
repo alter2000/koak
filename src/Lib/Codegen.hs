@@ -43,8 +43,8 @@ assign var x = do
   lcls <- gets symtab
   modify $ \s -> s { symtab = Map.insert var x lcls }
 
-getvar :: String -> Codegen Operand
-getvar var = do
+getVar :: String -> Codegen Operand
+getVar var = do
   syms <- gets symtab
   case Map.lookup var syms of
     Just x  -> pure x

@@ -168,17 +168,17 @@ pFuncDecl :: ASTDerivs -> Result ASTDerivs AST'
 P pFuncDecl = do
   string "def" >> spaces
   name <- identifier
-  args <- parens (P adIdentifier `sepBy` spaces)
+  args <- parens (identifier `sepBy` spaces)
   spaces
   body <- P adExpression
-  return $ mkFunction name args body
+  pure $ mkFunction name args body
 
 pExtern :: ASTDerivs -> Result ASTDerivs AST'
 P pExtern = do
  string "extern" >> spaces
  name <- identifier
- args <- parens (P adIdentifier `sepBy` spaces)
- return $ mkExtern name args
+ args <- parens (identifier `sepBy` spaces)
+ pure $ mkExtern name args
 
 pFuncCall :: ASTDerivs -> Result ASTDerivs AST'
 P pFuncCall = do

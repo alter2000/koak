@@ -67,9 +67,12 @@ makeBlock (l, BlockState _ s t) = BasicBlock l (reverse s) (maketerm t)
 emptyBlock :: Int -> BlockState
 emptyBlock i = BlockState i [] Nothing
 
+entryBlockName :: BSS.ShortByteString
+entryBlockName = "entry"
+
 emptyCodegen :: CodegenState
 emptyCodegen = CodegenState
-  { currentBlock = Name "entry"
+  { currentBlock = Name entryBlockName
   , blocks = Map.empty
   , symtab = Map.empty
   , blockCount = 1
@@ -84,7 +87,7 @@ fresh :: Codegen Word
 fresh = do
   i <- gets count
   modify $ \s -> s { count = 1 + i }
-  return $ i + 1
+  pure $ i + 1
 
 instr :: Instruction -> Codegen Operand
 instr ins = do
@@ -92,14 +95,14 @@ instr ins = do
   let ref = UnName n
   blk <- current
   let i = stack blk
-  modifyBlock (blk { stack = (ref := ins) : i } )
-  return $ local ref
+  modifyBlock $ blk { stack = (ref := ins) : i }
+  pure $ local ref
 
 terminator :: Named Terminator -> Codegen (Named Terminator)
 terminator trm = do
   blk <- current
-  modifyBlock (blk { term = Just trm })
-  return trm
+  modifyBlock $ blk { term = Just trm }
+  pure trm
 -- }}}
 
 -- Blocks {{{
@@ -142,7 +145,7 @@ current = do
   c <- gets currentBlock
   blks <- gets blocks
   case Map.lookup c blks of
-    Just x  -> return x
+    Just x  -> pure x
     Nothing -> error $ "No such block: " <> show c
 
 local ::  Name -> Operand

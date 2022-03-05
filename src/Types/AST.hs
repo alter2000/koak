@@ -1,6 +1,4 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveTraversable #-}
 -- | Everything getting us from the language into an AST
 -- and from an AST into a better AST
@@ -39,8 +37,8 @@ data ASTF rec
   | IfExpr rec [rec] [rec]
   | Call VarName [rec]
   | Assignment VarName rec
-  | Function VarName [rec] rec
-  | Extern VarName [rec]
+  | Function VarName [VarName] rec
+  | Extern VarName [VarName]
   deriving (Eq, Show
            , Functor, Foldable, Traversable
   )
@@ -70,21 +68,22 @@ instance Show1 ASTF where
   liftShowsPrec spf _ p (Assignment s val) = shows (s ++ " = ") . spf p val
   liftShowsPrec spf _ p (UnOp  s a)   = shows s . shows " " . spf p a
   liftShowsPrec spf slf p (WhileExpr cond block)
-    = shows "while " . spf p cond . shows " do " . slf block
+    = shows "while " . spf p cond
+    . shows " do " . slf block
   liftShowsPrec spf slf p (ForExpr assign cond inc block)
     = shows "for "
-      . spf p assign . shows ", "
-      . spf p cond . shows ", "
-      . spf p inc
-      . shows " do " . slf block
+    . spf p assign . shows ", "
+    . spf p cond . shows ", "
+    . spf p inc
+    . shows " do " . slf block
   liftShowsPrec spf slf p (IfExpr cond b1 b2) = shows "if"
     . spf p cond . shows " then " . slf b1 . shows " else " . slf b2
   liftShowsPrec _ slf _ (Call s b) = shows ("Call " <> s <> " with ") . slf b
   liftShowsPrec _ slf _ (Block b) = shows "block " . slf b
-  liftShowsPrec spf slf p (Function name args body) =
-    shows ("Fn def " ++ name) . slf args . shows ": " . spf p body
-  liftShowsPrec _ slf _ (Extern name args) = shows ("Extern def " ++ name)
-    . slf args
+  liftShowsPrec spf _ p (Function name args body) =
+    shows ("Fn def " ++ name) . showList args . shows ": " . spf p body
+  liftShowsPrec _ _ _ (Extern name args) =
+    shows ("Extern def " ++ name) . showList args
 
 showList' :: ShowS -> (a -> b -> ShowS) -> a -> [b] -> ShowS
 showList' end pf p =
@@ -130,10 +129,10 @@ mkCall = (Fix .) . Call
 mkAssignment :: VarName -> AST' -> AST'
 mkAssignment = (Fix .) . Assignment
 
-mkFunction :: VarName -> [AST'] -> AST' -> AST'
+mkFunction :: VarName -> [VarName] -> AST' -> AST'
 mkFunction = ((Fix .) .) . Function
 
-mkExtern :: VarName -> [AST'] -> AST'
+mkExtern :: VarName -> [VarName] -> AST'
 mkExtern = (Fix .) . Extern
 
 -- }}}
