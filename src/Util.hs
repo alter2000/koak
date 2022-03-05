@@ -12,17 +12,16 @@ import Control.Arrow
 import Control.Monad
 import Control.Monad.State
 import Data.Char
-import Data.List
-import qualified Data.Map as M
+import qualified LLVM.AST as AST
 
 import Types.Exceptions ( HALError )
 import Types.AST
 import Parser.ASTParser
--- import Lib.AST
+import Lib.Emit
 import Parser.ParseError
 
 -- TODO
-import Lib.Lib
+import Types.Codegen (emptyModule)
 
 -- | needs more flesh, usable while inside 'Control.Monad.Except.ExceptT'
 pExcept :: (String -> IO ()) -> IO a -> ParseError -> IO a
@@ -40,71 +39,71 @@ except = hPutStrLn stderr . displayException
 halt :: SomeException -> IO a
 halt e = except e >> exitWith (ExitFailure 84)
 
-type Repl = InputT (StateT Env IO)
+type Repl = InputT (StateT AST.Module IO)
 
-settings :: Settings (StateT Env IO)
+settings :: Settings (StateT AST.Module IO)
 settings = Settings
   { complete = noCompletion
   , historyFile = Just "./koak_history"
   , autoAddHistory = True
   }
 
-completeExpr :: CompletionFunc (StateT Env IO)
-completeExpr (bef, _after) = do
-  (Env e) <- get
-  let comps = filter (before `isPrefixOf`)
-        $ M.keys e <> ["define", "let", "lambda"]
-  pure (remainder, simpleCompletion <$> comps)
-    where (before, remainder) = let (revbef, revrem)= span isAlphaNum bef
-                                in (reverse revbef, reverse revrem)
 
-repl :: Env -> IO ()
+primEnv :: AST.Module
+primEnv = emptyModule "repl"
+
+-- completeExpr :: CompletionFunc (StateT Env IO)
+-- completeExpr (bef, _after) = do
+--   (Env e) <- get
+--   let comps = filter (before `isPrefixOf`)
+--         $ M.keys e <> ["define", "let", "lambda"]
+--   pure (remainder, simpleCompletion <$> comps)
+--     where (before, remainder) = let (revbef, revrem) = span isAlphaNum bef
+--                                 in (reverse revbef, reverse revrem)
+
+repl :: AST.Module -> IO ()
 repl env = flip evalStateT env $ runInputT settings
   $ till $ getInputLine "><> :: " >>= \case
     Nothing -> pure False
-    Just ":env" -> prettyPrintEnv >> pure True
     Just i -> handleInput i
 
 handleInput :: [Char] -> Repl Bool
 handleInput i  | filter (not . isSpace) i == "" = pure True
   | otherwise = do
     pp <- getExternalPrint
-    either (liftIO . pExcept pp (pure True))
-           (threadEnv pp) (parse i)
-          --  (threadEnv pp . applyRewriteRules) (parse i)
+    either (liftIO . pExcept pp (pure True)) threadMod (parse i)
 
-threadEnv :: (String -> IO ()) -> AST' -> Repl Bool
-threadEnv pp ast = do
-  env <- lift get
-  (r, e') <- liftIO $ handle (except >>> (>> pure (True, env))) $ do
-    (a', e') <- runStep ast env
-    printAST pp a' >> pure (True, e')
-  lift (put e') >> pure r
+threadMod :: AST' -> Repl Bool
+threadMod ast = do
+  mod <- lift get
+  (r, m') <- liftIO $ handle (except >>> (>> pure (True, mod))) $ do
+    m' <- codegen mod [ast]
+    pure (True, m')
+  lift (put m') >> pure r
 
 
-prettyPrintEnv :: InputT (StateT Env IO) ()
-prettyPrintEnv = liftIO . mapM_ putStrLn . showKeyVal
-  . M.toList . dropPrimitives . getEnv =<< lift get
-  where showKeyVal :: [(VarName, AST')] -> [String]
-        showKeyVal = fmap $ \(a, b) -> a <> " : " <> show b
-        dropPrimitives = flip M.difference $ getEnv primEnv
+-- prettyPrintEnv :: InputT (StateT Env IO) ()
+-- prettyPrintEnv = liftIO . mapM_ putStrLn . showKeyVal
+--   . M.toList . dropPrimitives . getEnv =<< lift get
+--   where showKeyVal :: [(VarName, AST')] -> [String]
+--         showKeyVal = fmap $ \(a, b) -> a <> " : " <> show b
+--         dropPrimitives = flip M.difference $ getEnv primEnv
 
 
-interpretFile :: Env -> FilePath -> IO (AST', Env)
-interpretFile env f = readFile f >>= either
+interpretFile :: AST.Module -> FilePath -> IO AST.Module
+interpretFile mod f = readFile f >>= either
   (pExcept (hPutStrLn stderr) (exitWith (ExitFailure 84)))
-  (evalFile env) . parseFile f
+  (evalFile mod) . parseFile f
 
-evalFile :: Env -> [AST'] -> IO (AST', Env)
-evalFile env [] = pure (list [], env)
-evalFile env [ast] = runStep ast env
-evalFile env (ast:asts) = runStep ast env >>= flip evalFile asts . snd
+evalFile :: AST.Module -> [AST'] -> IO AST.Module
+evalFile env  [] = pure env
+evalFile env ast = codegen env ast
 
 -- | interpret list of files, then return resulting env and return value
-interpret :: Env -> [String] -> IO (AST', Env)
-interpret env [] = pure (list [], env)
-interpret env [fp] = interpretFile env fp
-interpret env (fp:fps) = interpretFile env fp >>= flip interpret fps . snd
+interpret :: AST.Module -> [String] -> IO AST.Module
+interpret mod [] = pure mod
+interpret mod [fp] = interpretFile mod fp
+interpret mod (fp:fps) = interpretFile mod fp >>= flip interpret fps
 
 till :: Monad m => m Bool -> m ()
 till p = go where go = p >>= flip when go
