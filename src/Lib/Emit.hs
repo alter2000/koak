@@ -23,25 +23,23 @@ import RecursionSchemes
 toSignature :: [BSS.ShortByteString] -> [(AST.Type, AST.Name)]
 toSignature = map (\x -> (double, AST.Name x))
 
-codegenTop :: A.AST' -> LLVM ()
-codegenTop (Fix (A.Function name args body)) = define double name
+codegenToplevel :: A.AST' -> LLVM ()
+codegenToplevel (Fix (A.Function name args body)) = define double name
   (toSignature (packShort <$> args))
   $ createBlocks . execCodegen $ do
-    entry' <- addBlock entryBlockName
-    setBlock entry'
+    addBlock entryBlockName >>= setBlock
     forM_ args $ \a -> do
       var <- alloca double
       store var $ local (AST.Name (packShort a))
       assign a var
     cgen body >>= ret
 
-codegenTop (Fix (A.Extern name args)) = external double name fnargs
-  where fnargs = Map.fromList $ toSignature (packShort <$> args)
+codegenToplevel (Fix (A.Extern name args)) = external double name
+ $ Map.fromList $ toSignature (packShort <$> args)
 
-codegenTop exp = define double "main" [] blks
-  where blks = createBlocks . execCodegen $ do
-          addBlock entryBlockName >>= setBlock
-          cgen exp >>= ret
+codegenToplevel ex = define double "main" []
+  $ createBlocks . execCodegen $
+    addBlock entryBlockName >>= setBlock >> cgen ex >>= ret
 
 -------------------------------------------------------------------------------
 -- Operations
@@ -84,4 +82,4 @@ codegen :: AST.Module -> [A.AST'] -> IO AST.Module
 codegen mod fns = withContext $ \ctx ->
   withModuleFromAST ctx newAST $ \m ->
     moduleLLVMAssembly m >>= BS.putStrLn >> pure newAST
-  where newAST = runLLVM mod $ traverse codegenTop fns
+  where newAST = runLLVM mod $ traverse codegenToplevel fns
