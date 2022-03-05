@@ -7,6 +7,8 @@ import Hedgehog
 import qualified Hedgehog.Gen as G
 import qualified Hedgehog.Range as R
 
+import Tests.Parser.ASTParser
+
 tests :: IO Bool
 tests = checkParallel $ Group "Test.Example"
   [ ("prop_reverse", property $ do
@@ -15,7 +17,4 @@ tests = checkParallel $ Group "Test.Example"
   ]
 
 main :: IO ()
-main = hspec $ do
-  describe "Parser.AST" $ do
-    it "works idk explain what it should do" $ do
-      1 + 1 `shouldBe` 2
+main = hspec $ do basicParserTest

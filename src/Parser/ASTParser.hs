@@ -164,6 +164,13 @@ P pUnaryOp =
 pPostfix :: ASTDerivs -> Result ASTDerivs AST'
 P pPostfix = P adExtern <|> P adFuncDecl <|> P adFuncCall <|> P adPrimary <?> "Postfix"
 
+pExtern :: ASTDerivs -> Result ASTDerivs AST'
+P pExtern = do
+ string "extern" >> spaces
+ name <- identifier
+ args <- parens (P adIdentifier `sepBy` spaces)
+ return $ mkExtern name args
+
 pFuncDecl :: ASTDerivs -> Result ASTDerivs AST'
 P pFuncDecl = do
   string "def" >> spaces
@@ -173,13 +180,6 @@ P pFuncDecl = do
   body <- P adExpression
   return $ mkFunction name args body
 
-pExtern :: ASTDerivs -> Result ASTDerivs AST'
-P pExtern = do
- string "extern" >> spaces
- name <- identifier
- args <- parens (P adIdentifier `sepBy` spaces)
- return $ mkExtern name args
-
 pFuncCall :: ASTDerivs -> Result ASTDerivs AST'
 P pFuncCall = do
   name <- identifier
@@ -188,7 +188,7 @@ P pFuncCall = do
   <?> "Call"
 
 pPrimary :: ASTDerivs -> Result ASTDerivs AST'
-P pPrimary = P adLiteral <|> P adIdentifier <|> parens (P adBlock) <?> "Primary"
+P pPrimary = P adLiteral <|> P adIdentifier <|> parens (P adExpression) <?> "Primary"
 
 pIdentifier :: ASTDerivs -> Result ASTDerivs AST'
 P pIdentifier = mkIdentifier <$> identifier <?> "Identifier"

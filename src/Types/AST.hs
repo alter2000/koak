@@ -93,6 +93,8 @@ showList' end pf p =
 instance Eq1 ASTF where
   liftEq _    (Literal a)    (Literal b) = a == b
   liftEq _ (Identifier a) (Identifier b) = a == b
+  liftEq f (Block a) (Block b) = liftEq f a b
+  liftEq f (Extern a argsA) (Extern b argsB) = a == b && liftEq f argsA argsB
   liftEq _ _ _ = False
 -- }}}
 

@@ -81,6 +81,7 @@ test-suite koak-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Tests.Parser.ASTParser
       Paths_koak
   hs-source-dirs:
       test

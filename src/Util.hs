@@ -70,7 +70,8 @@ handleInput i  | filter (not . isSpace) i == "" = pure True
   | otherwise = do
     pp <- getExternalPrint
     either (liftIO . pExcept pp (pure True))
-           (threadEnv pp . applyRewriteRules) (parse i)
+           (threadEnv pp) (parse i)
+          --  (threadEnv pp . applyRewriteRules) (parse i)
 
 threadEnv :: (String -> IO ()) -> AST' -> Repl Bool
 threadEnv pp ast = do
