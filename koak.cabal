@@ -28,7 +28,6 @@ library
   exposed-modules:
       Lib.Codegen
       Lib.Emit
-      Lib.Lib
       Parser.ASTParser
       Parser.ParseError
       Parser.ParserImpl
@@ -45,7 +44,7 @@ library
       Paths_koak
   hs-source-dirs:
       src
-  ghc-options: -Wall -Wno-type-defaults
+  ghc-options: -Wall -Wno-type-defaults -Wno-name-shadowing
   build-depends:
       base >=4.7 && <5
     , bytestring
@@ -64,7 +63,7 @@ executable koak-exe
       Paths_koak
   hs-source-dirs:
       app
-  ghc-options: -Wall -Wno-type-defaults -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -Wall -Wno-type-defaults -Wno-name-shadowing -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
     , bytestring
@@ -86,7 +85,7 @@ test-suite koak-test
       Paths_koak
   hs-source-dirs:
       test
-  ghc-options: -Wall -Wno-type-defaults -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -Wall -Wno-type-defaults -Wno-name-shadowing -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
     , bytestring
