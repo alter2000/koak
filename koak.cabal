@@ -27,6 +27,7 @@ source-repository head
 library
   exposed-modules:
       Lib.Codegen
+      Lib.Emit
       Lib.Lib
       Parser.ASTParser
       Parser.ParseError
