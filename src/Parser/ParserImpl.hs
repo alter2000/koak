@@ -183,10 +183,16 @@ noneOf :: Derivs d => String -> Parser d Char
 noneOf chs = satisfy anyChar (`notElem` chs)
        <?> ("any character not in " <> show chs)
 
+-- string this = getch >>= scan this
+--  where
+--   scan [] _ = return this
+--   scan (x:xs) (y:ys) | x == y = get >> scan xs ys
+--   scan _ _ = fail
+
 -- | @string s@ matches all the characters in @s@ in sequence.
 string :: Derivs d => String -> Parser d String
-string s = p s <?> show s
-  where p = foldr ((*>) . char) (pure [])
+string s@(x:xs) = (:) <$> char x <*> string xs <?> show s
+string [] = pure []
 
 -- | @stringFrom ss@ matches any string in @ss@. If any strings in @ss@ are
 -- prefixes of other strings in @ss@, they must appear later in the list.

@@ -17,4 +17,6 @@ tests = checkParallel $ Group "Test.Example"
   ]
 
 main :: IO ()
-main = hspec $ do basicParserTest
+main = hspec $ do
+  literalsParserTest
+  keywordsParserTest

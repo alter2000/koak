@@ -26,8 +26,12 @@ data ASTDerivs = ASTDerivs
   , adExtern      :: Result ASTDerivs AST'
   , adFuncDecl    :: Result ASTDerivs AST'
   , adDefn        :: Result ASTDerivs AST'
+  , adIfExpr      :: Result ASTDerivs AST'
+  , adForExpr     :: Result ASTDerivs AST'
+  , adWhileExpr   :: Result ASTDerivs AST'
+  , adComp        ::  Result ASTDerivs AST'
 
-   , adIgnore     :: Result ASTDerivs String
+  , adIgnore     :: Result ASTDerivs String
 
   , adChar        :: Result ASTDerivs Char
   , adPos         :: Pos
@@ -60,13 +64,17 @@ evalDerivs pos s = d where
     , adExtern      = pExtern d
     , adFuncDecl    = pFuncDecl d
     , adDefn        = pDefn d
+    , adIfExpr      = pIfExpr d
+    , adForExpr     = pForExpr d
+    , adWhileExpr   = pWhileExpr d
+    , adComp        = pComp d
 
     , adIgnore = pIgnore d
     -- , adElem   = pElem d
     }
 
 pExpr :: ASTDerivs -> Result ASTDerivs AST'
-pExpr = pTopLevel
+pExpr = pForExpr
 
 parse :: String -> Either ParseError AST'
 parse s = case pExpr $ evalDerivs (Pos "<stdin>" 1 1) s of
@@ -84,40 +92,6 @@ P pIgnore = concat <$>
     (optional spaces *> many (P pComment <* spaces))
               <?> "non-code"
 
-pBlock :: ASTDerivs -> Result ASTDerivs AST'
-P pBlock = pIfExpr <|> pForExpr <|> pWhileExpr <|> mkBlock <$> blockCont
-  <?> "Block"
-  where
-    blockCont :: Parser ASTDerivs [AST']
-    blockCont = (:) <$> P adExpression <*> many (char ':' *> P adExpression)
-
-    pIfExpr :: Parser ASTDerivs AST'
-    pIfExpr = do
-      string "if" >> spaces
-      cond <- P adExpression
-      string "then" >> spaces
-      thenBody <- blockCont
-      elseBody <- optional (spaces *> string "else" *> spaces *> blockCont)
-      return $ mkIfExpr cond thenBody (fromMaybe [] elseBody)
-
-    pForExpr :: Parser ASTDerivs AST'
-    pForExpr = do
-      string "for" *> spaces
-      assignment <- P adAssign
-      string "," >> spaces
-      cond <- P adExpression
-      string "," >> spaces
-      inc <- P adExpression
-      spaces
-      mkForExpr assignment cond inc <$> blockCont
-
-    pWhileExpr :: Parser ASTDerivs AST'
-    pWhileExpr = do
-      string "while" >> spaces
-      cond <- P adExpression
-      string "do" >> spaces
-      mkWhileExpr cond <$> blockCont
-
 pAssignment :: ASTDerivs -> Result ASTDerivs AST'
 P pAssignment = do
   str <- identifier
@@ -129,7 +103,39 @@ pTopLevel :: ASTDerivs -> Result ASTDerivs AST'
 P pTopLevel = mkBlock <$> (P adDefn `sepBy` (spaces >> char ';' >> spaces))
 
 pDefn :: ASTDerivs -> Result ASTDerivs AST'
-P pDefn = P adExtern <|> P adFuncDecl <|> P adExpression
+P pDefn = P adExtern <|> P adFuncDecl <|> P adBlock <|> P adExpression
+
+pBlock :: ASTDerivs -> Result ASTDerivs AST'
+P pBlock = P adIfExpr <|> P adForExpr <|> P adWhileExpr {- <|> mkBlock <$> blockCont
+  <?> "Block"
+  where
+    blockCont :: Parser ASTDerivs [AST']
+    blockCont = (:) <$> P adExpression <*> many (char ':' *> P adExpression) -}
+
+pIfExpr :: ASTDerivs -> Result ASTDerivs AST'
+P pIfExpr = do
+  string "if" >> some space
+  cond <- P adExpression <* some space
+  string "then" >> some space
+  thenBody <- P adExpression
+  elseBody <- P adExpression
+  return $ mkIfExpr cond thenBody elseBody
+
+pForExpr :: ASTDerivs -> Result ASTDerivs AST'
+P pForExpr = mkForExpr
+  <$> (string "for" *> some space *> identifier)
+  <*> ((spaces *> char '=' *> spaces) *> P adExpression)
+  <*> ((string "," >> spaces) *> P adExpression)
+  <*> ((string "," >> spaces) *> P adExpression)
+  <*> ((some space >> string "in" >> some space) *> P adExpression)
+  <?> "FOR"
+
+pWhileExpr :: ASTDerivs -> Result ASTDerivs AST'
+P pWhileExpr = do
+  string "while" >> some space
+  cond <- P adExpression
+  string "do" >> some space
+  mkWhileExpr cond <$> P adExpression
 
 pExpression :: ASTDerivs -> Result ASTDerivs AST'
 P pExpression = {- P adAssign <|> -} do
@@ -143,17 +149,29 @@ P pExpression = {- P adAssign <|> -} do
 
 pTerm :: ASTDerivs -> Result ASTDerivs AST'
 P pTerm = do
-    first <- P adFactor <* spaces
-    foll <- many ((,) <$> (oneOf "*/" <* spaces) <*> (P adFactor <* spaces))
+    first <- P adComp <* spaces
+    foll <- many ((,) <$> (oneOf "*/" <* spaces) <*> (P adComp <* spaces))
     return (foldl foldFn first foll) <?> "Term"
         where
             foldFn acc ('/', e) = mkBinOp Divide acc e
             foldFn acc ('*', e) = mkBinOp Times acc e
             foldFn _ _ = undefined
 
+pComp :: ASTDerivs -> Result ASTDerivs AST'
+P pComp = do
+  a <- P adFactor <* spaces
+  op <- (string ">" <|> string "<" <|> string "==" <|> string "!=") <* spaces
+  b <- P adFactor <* spaces
+  return $ case op of
+    "<" -> mkBinOp LessThan a b
+    ">" -> mkBinOp MoreThan a b
+    "==" -> mkBinOp Equality a b
+    "!=" -> mkBinOp Difference a b
+    s -> mkBinOp (Err s) a b
+  <?> "Comp"
+
 pFactor :: ASTDerivs -> Result ASTDerivs AST'
 P pFactor = P adUnaryOp <|> parens (P adExpression) <?> "Factor"
-
 pUnaryOp :: ASTDerivs -> Result ASTDerivs AST'
 P pUnaryOp =
   ((mkUnOp Invert <$ char '!' <|> mkUnOp Neg <$ char '-')
@@ -166,14 +184,14 @@ P pPostfix = P adExtern <|> P adFuncDecl <|> P adFuncCall <|> P adPrimary <?> "P
 
 pExtern :: ASTDerivs -> Result ASTDerivs AST'
 P pExtern = do
- string "extern" >> spaces
+ string "extern" >> some space
  name <- identifier
  args <- parens (identifier `sepBy` spaces)
  pure $ mkExtern name args
 
 pFuncDecl :: ASTDerivs -> Result ASTDerivs AST'
 P pFuncDecl = do
-  string "def" >> spaces
+  string "def" >> some space
   name <- identifier
   args <- parens (identifier `sepBy` spaces)
   spaces
