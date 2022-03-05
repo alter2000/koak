@@ -23,4 +23,4 @@ basicParserTest = describe "Parser.ASTParser" $ do
     it "should make extern foo from \"extern foo()\"" $ do
       parse "extern foo()" `shouldBe` Right (mkBlock [mkExtern "foo" []])
     it "should make extern foo a b from \"extern foo(a b)\"" $ do
-      parse "extern foo(a b)" `shouldBe` Right (mkBlock [mkExtern "foo" [mkIdentifier "a", mkIdentifier "b"]])
+      parse "extern foo(a b)" `shouldBe` Right (mkBlock [mkExtern "foo" ["a", "b"]])
