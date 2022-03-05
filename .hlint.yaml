@@ -6,7 +6,7 @@
 - ignore: { name: "Use lambda-case" }
 - ignore: { name: "Use tuple-section" }
 
-- smell: { type: long functions, limit: 10 }
+- smell: { type: long functions, limit: 11 }
 
 - functions:
   - {name: unsafeDupablePerformIO, within: []} # Unsafe
