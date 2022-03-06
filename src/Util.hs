@@ -17,11 +17,10 @@ import qualified LLVM.AST as AST
 import Types.Exceptions ( HALError )
 import Types.AST
 import Parser.ASTParser
-import Lib.Emit
 import Parser.ParseError
 
 -- TODO
-import Types.Codegen (emptyModule)
+import Types.Codegen
 
 -- | needs more flesh, usable while inside 'Control.Monad.Except.ExceptT'
 pExcept :: (String -> IO ()) -> IO a -> ParseError -> IO a
@@ -52,15 +51,6 @@ settings = Settings
 primEnv :: AST.Module
 primEnv = emptyModule "repl"
 
--- completeExpr :: CompletionFunc (StateT Env IO)
--- completeExpr (bef, _after) = do
---   (Env e) <- get
---   let comps = filter (before `isPrefixOf`)
---         $ M.keys e <> ["define", "let", "lambda"]
---   pure (remainder, simpleCompletion <$> comps)
---     where (before, remainder) = let (revbef, revrem) = span isAlphaNum bef
---                                 in (reverse revbef, reverse revrem)
-
 repl :: AST.Module -> IO ()
 repl env = flip evalStateT env $ runInputT settings
   $ till $ getInputLine "><> :: " >>= \case
@@ -73,21 +63,13 @@ handleInput i  | filter (not . isSpace) i == "" = pure True
     pp <- getExternalPrint
     either (liftIO . pExcept pp (pure True)) threadMod (parse i)
 
-threadMod :: [AST'] -> Repl Bool
+threadMod :: [Phrase] -> Repl Bool
 threadMod ast = do
   mod <- lift get
   (r, m') <- liftIO $ handle (except >>> (>> pure (True, mod))) $ do
-    m' <- codegen mod ast
+    m' <- cgen ast
     pure (True, m')
   lift (put m') >> pure r
-
-
--- prettyPrintEnv :: InputT (StateT Env IO) ()
--- prettyPrintEnv = liftIO . mapM_ putStrLn . showKeyVal
---   . M.toList . dropPrimitives . getEnv =<< lift get
---   where showKeyVal :: [(VarName, AST')] -> [String]
---         showKeyVal = fmap $ \(a, b) -> a <> " : " <> show b
---         dropPrimitives = flip M.difference $ getEnv primEnv
 
 
 interpretFile :: AST.Module -> FilePath -> IO AST.Module
@@ -95,9 +77,9 @@ interpretFile mod f = readFile f >>= either
   (pExcept (hPutStrLn stderr) (exitWith (ExitFailure 84)))
   (evalFile mod) . parseFile f
 
-evalFile :: AST.Module -> [AST'] -> IO AST.Module
+evalFile :: AST.Module -> [Phrase] -> IO AST.Module
 evalFile env  [] = pure env
-evalFile env ast = codegen env ast
+evalFile env ast = cgen ast
 
 -- | interpret list of files, then return resulting env and return value
 interpret :: AST.Module -> [String] -> IO AST.Module

@@ -26,12 +26,9 @@ source-repository head
 
 library
   exposed-modules:
-      Lib.Codegen
-      Lib.Emit
       Parser.ASTParser
       Parser.ParseError
       Parser.ParserImpl
-      RecursionSchemes
       Types.AST
       Types.Codegen
       Types.Cofree
@@ -53,7 +50,10 @@ library
     , llvm-hs
     , llvm-hs-pure
     , mtl
+    , pretty-simple
     , recursion-schemes
+    , text
+    , transformers
     , validation
   default-language: Haskell2010
 
@@ -73,7 +73,10 @@ executable koak-exe
     , llvm-hs
     , llvm-hs-pure
     , mtl
+    , pretty-simple
     , recursion-schemes
+    , text
+    , transformers
     , validation
   default-language: Haskell2010
 
@@ -101,5 +104,7 @@ test-suite koak-test
     , recursion-schemes
     , tasty
     , tasty-golden
+    , text
+    , transformers
     , validation
   default-language: Haskell2010

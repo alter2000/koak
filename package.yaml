@@ -23,10 +23,13 @@ dependencies:
 - base >= 4.7 && < 5
 - containers
 - mtl
+- transformers
 - recursion-schemes
 - llvm-hs
 - llvm-hs-pure
+- pretty-simple
 - bytestring
+- text
 - validation
 - haskeline
 # - microlens

@@ -6,38 +6,32 @@ module Types.AST
   where
 
 
-import Data.Functor.Classes
-import Control.Arrow
-import Data.List as L
 import qualified Data.Map.Strict as M
 
-import RecursionSchemes ( Fix(..) )
 import Control.Monad.State
 import Control.Monad.Reader
--- import Types.Cofree as C
--- import Types.Pos
+import LLVM.AST (mkName, Name)
 
-type VarName = String
+type VarName = Name
 type Interp = StateT Env (ReaderT Env IO)
 
-newtype Env = Env { getEnv :: M.Map VarName ASTF }
+newtype Env = Env { getEnv :: M.Map VarName AST }
   deriving (Eq, Semigroup, Monoid)
 
 instance Show Env where show = show . M.toList . getEnv
 
 
-data ASTF
+data AST
   = Literal Double
   | Identifier VarName
-  | BinOp BinFunc ASTF ASTF
-  | UnOp UnFunc ASTF
-  | ForExpr VarName ASTF ASTF ASTF ASTF
-  | WhileExpr ASTF ASTF
-  | IfExpr ASTF ASTF ASTF
-  | Call VarName [ASTF]
-  | Let VarName ASTF ASTF
+  | BinOp VarName AST AST
+  | UnOp VarName AST
+  | ForExpr VarName AST AST AST AST
+  | WhileExpr AST AST
+  | IfExpr AST AST AST
+  | Call VarName [AST]
+  | Let VarName AST AST
   deriving (Eq, Show, Ord
-          --  , Functor, Foldable, Traversable
   )
 
 {-  | Function VarName [VarName] rec
@@ -59,99 +53,61 @@ data BinFunc
   deriving (Eq, Ord, Show)
 
 data Defn
-  = Function VarName [VarName] ASTF
+  = Function VarName [VarName] AST
   | Extern VarName [VarName]
-  | BinaryDef VarName [VarName] ASTF
-  | UnaryDef VarName VarName ASTF
+  | BinaryDef VarName [VarName] AST
+  | UnaryDef VarName VarName AST
   deriving (Eq, Ord, Show)
 
 data Phrase
   = DefnPhrase Defn
-  | ExprPhrase ASTF
+  | ExprPhrase AST
   deriving (Eq, Ord, Show)
 
--- Instances {{{
-
--- instance Show1 ASTF where
---   -- liftShowsPrec showsPrecFunc showListFunc prio item = shows smth
---   liftShowsPrec _ _ _  (Literal s) = shows s
---   liftShowsPrec _ _ _  (Identifier s) = shows s
---   liftShowsPrec spf _ p (BinOp s a b) =
---     spf p a . shows (" " ++ show s ++ " ") . spf p b
---   liftShowsPrec spf _ p (Let s val expr)
---     = shows (s ++ " = ") . spf p val . shows " in " . spf p expr
---   liftShowsPrec spf _ p (UnOp  s a)   = shows s . shows " " . spf p a
---   liftShowsPrec spf _ p (WhileExpr cond expr)
---     = shows "while " . spf p cond
---     . shows " do " . spf p expr
---   liftShowsPrec spf _ p (ForExpr varName assign cond inc expr)
---     = shows ("for " ++ varName ++ " = ")
---     . spf p assign . shows ", "
---     . spf p cond . shows ", "
---     . spf p inc
---     . shows " do " . spf p expr
---   liftShowsPrec spf _ p (IfExpr cond b1 b2) = shows "if"
---     . spf p cond . shows " then " . spf p b1 . shows " else " . spf p b2
---   liftShowsPrec _ slf _ (Call s b) = shows ("Call " <> s <> " with ") . slf b
---   liftShowsPrec spf _ p (Function name args body) =
---     shows ("Fn def " ++ name) . showList args . shows ": " . spf p body
---   liftShowsPrec _ _ _ (Extern name args) =
---     shows ("Extern def " ++ name) . showList args
-
-showList' :: ShowS -> (a -> b -> ShowS) -> a -> [b] -> ShowS
-showList' end pf p =
-  fmap (pf p) >>> L.intersperse (showChar ' ') >>> foldr (.) end
-
--- instance Eq1 ASTF where
---   liftEq _    (Literal a)    (Literal b) = a == b
---   liftEq _ (Identifier a) (Identifier b) = a == b
---   liftEq f (BinOp f1 a1 b1) (BinOp f2 a2 b2) = f1 == f2 && f a1 a2 && f b1 b2
---   liftEq f (UnOp f1 a1) (UnOp f2 a2) = f1 == f2 && f a1 a2
---   liftEq f (ForExpr v1 a1 e1 i1 b1) (ForExpr v2 a2 e2 i2 b2) = v1 == v2 && f a1 a2 && f e1 e2 && f i1 i2 && f b1 b2
---   liftEq f (WhileExpr c1 e1) (WhileExpr c2 e2) = f c1 c2 && f e1 e2
---   liftEq f (IfExpr c1 t1 e1) (IfExpr c2 t2 e2) = f c1 c2 && f t1 t2 && f e1 e2
---   liftEq f (Call n1 a1) (Call n2 a2) = n1 == n2 && liftEq f a1 a2
---   liftEq f (Let n1 v1 e1) (Let n2 v2 e2) = n1 == n2 && f v1 v2 && f e1 e2
---   liftEq _ (Extern a argsA) (Extern b argsB) = a == b && argsA == argsB
---   liftEq f (Function s1 a1 b1) (Function s2 a2 b2) = s1 == s2 && a1 == a2 && f b1 b2
---   liftEq _ _ _ = False
--- }}}
-
--- type AST' = Fix ASTF
+-- type AST' = Fix AST
 
 -- Smart constructors {{{
 
-mkLiteral :: Double -> ASTF
+mkLiteral :: Double -> AST
 mkLiteral = Literal
 
-mkIdentifier :: VarName -> ASTF
-mkIdentifier = Identifier
+mkIdentifier :: String -> AST
+mkIdentifier = Identifier . mkName
 
-mkBinOp :: BinFunc -> ASTF -> ASTF -> ASTF
-mkBinOp = BinOp
+mkBinOp :: BinFunc -> AST -> AST -> AST
+mkBinOp Plus       a b = BinOp (mkName "+")  a b
+mkBinOp Minus      a b = BinOp (mkName "-")  a b
+mkBinOp Times      a b = BinOp (mkName "*")  a b
+mkBinOp Divide     a b = BinOp (mkName "/")  a b
+mkBinOp LessThan   a b = BinOp (mkName "<")  a b
+mkBinOp MoreThan   a b = BinOp (mkName ">")  a b
+mkBinOp Equality   a b = BinOp (mkName "==") a b
+mkBinOp Difference a b = BinOp (mkName "!=") a b
+mkBinOp Assignment a b = BinOp (mkName "=")  a b
 
-mkUnOp :: UnFunc -> ASTF -> ASTF
-mkUnOp = UnOp
+mkUnOp :: UnFunc -> AST -> AST
+mkUnOp Neg    a = UnOp (mkName "-") a
+mkUnOp Invert a = UnOp (mkName "!") a
 
-mkForExpr :: VarName -> ASTF -> ASTF -> ASTF -> ASTF -> ASTF
-mkForExpr = ForExpr
+mkForExpr :: String -> AST -> AST -> AST -> AST -> AST
+mkForExpr = ForExpr . mkName
 
-mkWhileExpr :: ASTF -> ASTF -> ASTF
+mkWhileExpr :: AST -> AST -> AST
 mkWhileExpr = WhileExpr
 
-mkIfExpr :: ASTF -> ASTF -> ASTF -> ASTF
+mkIfExpr :: AST -> AST -> AST -> AST
 mkIfExpr = IfExpr
 
-mkCall :: VarName -> [ASTF] -> ASTF
-mkCall = Call
+mkCall :: String -> [AST] -> AST
+mkCall = Call . mkName
 
-mkLet :: VarName -> ASTF -> ASTF -> ASTF
-mkLet = Let
+mkLet :: String -> AST -> AST -> AST
+mkLet = Let . mkName
 
-mkFunction :: VarName -> [VarName] -> ASTF -> Defn
-mkFunction = Function
+mkFunction :: String -> [String] -> AST -> Defn
+mkFunction fname args = Function (mkName fname) (mkName <$> args)
 
-mkExtern :: VarName -> [VarName] -> Defn
-mkExtern = Extern
+mkExtern :: String -> [String] -> Defn
+mkExtern ename args = Extern (mkName ename) (mkName <$> args)
 
 -- }}}
