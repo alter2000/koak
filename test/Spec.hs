@@ -22,3 +22,7 @@ main = hspec $ do
   keywordsParserTest
   ifExprParserTest
   forExprParserTest
+  whileExprParserTest
+  functionCallParserTest
+  unaryOpParserTest
+  sequencingParserTest

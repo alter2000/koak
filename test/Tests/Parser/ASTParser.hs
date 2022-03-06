@@ -43,6 +43,31 @@ ifExprParserTest = describe "If Expressions" $ do
       (mkBinOp MoreThan (mkIdentifier "foo") (mkLiteral 2))
       (mkIdentifier "bar")
       (mkLiteral 123.0)]
+  it "should make same if with bracketed expression" $ do
+    parse "if (foo>2) then bar else 123"
+      `shouldBe`
+      Right [mkIfExpr
+        (mkBinOp MoreThan (mkIdentifier "foo") (mkLiteral 2))
+        (mkIdentifier "bar")
+        (mkLiteral 123.0)]
+    parse "if foo>2 then (bar) else 123"
+      `shouldBe`
+      Right [mkIfExpr
+        (mkBinOp MoreThan (mkIdentifier "foo") (mkLiteral 2))
+        (mkIdentifier "bar")
+        (mkLiteral 123.0)]
+    parse "if foo>2 then bar else (123)"
+      `shouldBe`
+      Right [mkIfExpr
+        (mkBinOp MoreThan (mkIdentifier "foo") (mkLiteral 2))
+        (mkIdentifier "bar")
+        (mkLiteral 123.0)]
+    parse "if (foo>2) then (bar) else (123)"
+      `shouldBe`
+      Right [mkIfExpr
+        (mkBinOp MoreThan (mkIdentifier "foo") (mkLiteral 2))
+        (mkIdentifier "bar")
+        (mkLiteral 123.0)]
 
 forExprParserTest :: SpecWith ()
 forExprParserTest = describe "For Expressions" $ do
@@ -53,3 +78,79 @@ forExprParserTest = describe "For Expressions" $ do
       (mkBinOp LessThan (mkIdentifier "a") (mkLiteral 3))
       (mkBinOp Plus (mkIdentifier "a") (mkLiteral 1))
       (mkBinOp Times (mkLiteral 123) (mkLiteral 2))]
+  it "should make same for with bracketed expressions" $ do
+    parse "for a = (1), (a < 3), (a + 1) in (123*2)"
+      `shouldBe`
+      Right [mkForExpr "a" (mkLiteral 1)
+        (mkBinOp LessThan (mkIdentifier "a") (mkLiteral 3))
+        (mkBinOp Plus (mkIdentifier "a") (mkLiteral 1))
+        (mkBinOp Times (mkLiteral 123) (mkLiteral 2))]
+
+
+whileExprParserTest :: SpecWith ()
+whileExprParserTest = describe "While Expressions" $ do
+  it "should make while from \"while a < 3 do a+1\"" $ do
+    parse "while a < 3 do a+1"
+      `shouldBe`
+      Right [mkWhileExpr
+        (mkBinOp LessThan (mkIdentifier "a") (mkLiteral 3))
+        (mkBinOp Plus (mkIdentifier "a") (mkLiteral 1))]
+  it "should make same while with bracketed expressions" $ do
+    parse "while (a < 3) do (a+1)"
+      `shouldBe`
+      Right [mkWhileExpr
+        (mkBinOp LessThan (mkIdentifier "a") (mkLiteral 3))
+        (mkBinOp Plus (mkIdentifier "a") (mkLiteral 1))]
+
+functionCallParserTest :: SpecWith ()
+functionCallParserTest = describe "Function call" $ do
+  it "should make foo function call from \"foo(foo())\"" $ do
+    parse "foo()" `shouldBe` Right [mkCall "foo" []]
+  it "should make foo function call from \"foo(1, b, C)\"" $ do
+    parse "foo(1, b, C)"
+      `shouldBe`
+      Right [mkCall "foo" [mkLiteral 1, mkIdentifier "b", mkIdentifier "C"]]
+  it "should make same function call with bracketed expressions" $ do
+    parse "foo((1), (b), (C))"
+      `shouldBe`
+      Right [mkCall "foo" [mkLiteral 1, mkIdentifier "b", mkIdentifier "C"]]
+  it "should make nested call" $ do
+    parse "foo(bar(a), 123)"
+      `shouldBe`
+      Right [mkCall "foo" [
+        mkCall "bar" [mkIdentifier "a"],
+        mkLiteral 123
+      ]]
+
+unaryOpParserTest :: SpecWith ()
+unaryOpParserTest = describe "Unary Operators" $ do
+  it "should make Neg" $ do
+    parse "-1"
+      `shouldBe` Right [mkUnOp Neg (mkLiteral 1)]
+  it "should make Invert" $ do
+    parse "!a"
+      `shouldBe` Right [mkUnOp Invert (mkIdentifier "a")]
+  it "should make double Invert" $ do
+    parse "!!a"
+      `shouldBe` Right [mkUnOp Invert $ mkUnOp Invert (mkIdentifier "a")]
+  it "should make double Neg" $ do
+    parse "--1"
+      `shouldBe` Right [mkUnOp Neg $ mkUnOp Neg (mkLiteral 1)]
+  it "should mix Neg and Invert " $ do
+    parse "-!a"
+      `shouldBe` Right [mkUnOp Neg $ mkUnOp Invert (mkIdentifier "a")]
+
+sequencingParserTest :: SpecWith ()
+sequencingParserTest = describe "Sequencing" $ do
+  it "should make two expressions" $ do
+    parse "if foo>2 then bar else 123; for a = 1, a < 3, a + 1 in 123*2"
+      `shouldBe` Right [mkIfExpr
+      (mkBinOp MoreThan (mkIdentifier "foo") (mkLiteral 2))
+      (mkIdentifier "bar")
+      (mkLiteral 123.0),
+      mkForExpr "a" (mkLiteral 1)
+      (mkBinOp LessThan (mkIdentifier "a") (mkLiteral 3))
+      (mkBinOp Plus (mkIdentifier "a") (mkLiteral 1))
+      (mkBinOp Times (mkLiteral 123) (mkLiteral 2))]
+  it "should do nothing" $ do
+    parse "" `shouldBe` Right []
