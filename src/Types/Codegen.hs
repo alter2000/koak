@@ -7,8 +7,6 @@ import Data.List
 import Data.Function
 
 import LLVM.AST
-import qualified LLVM.AST as AST
-import qualified LLVM.AST.Constant as C
 
 import Control.Monad.State
 import qualified Data.ByteString.Internal as BS
@@ -16,13 +14,13 @@ import qualified Data.ByteString.Short as BSS
 import qualified Data.Map.Strict as Map
 
 -- Module level {{{
-newtype LLVM a = LLVM { unLLVM :: State AST.Module a }
-  deriving (Functor, Applicative, Monad, MonadState AST.Module )
+newtype LLVM a = LLVM { unLLVM :: State Module a }
+  deriving (Functor, Applicative, Monad, MonadState Module )
 
-runLLVM :: AST.Module -> LLVM a -> AST.Module
+runLLVM :: Module -> LLVM a -> Module
 runLLVM = flip (execState . unLLVM)
 
-emptyModule :: String -> AST.Module
+emptyModule :: String -> Module
 emptyModule label = defaultModule { moduleName = packShort label }
 
 type Names = Map.Map BSS.ShortByteString Int
@@ -40,19 +38,36 @@ double :: Type
 double = FloatingPointType DoubleFP
 
 -- Codegen state {{{
+-- | context we're hauling along until every instruction is resolved
 data CodegenState = CodegenState
-  { currentBlock :: Name                     -- Name of the active block to append to
-  , blocks       :: Map.Map Name BlockState  -- Blocks for function
-  , symtab       :: SymbolTable              -- Function scope symbol table
-  , blockCount   :: Int                      -- Count of basic blocks
-  , count        :: Word                     -- Count of unnamed instructions
-  , names        :: Names                    -- Name Supply
+  { currentBlock :: Name
+  -- ^ where to append
+  , blocks :: Map.Map Name BlockState
+  -- ^ all function blocks
+  , symtab :: SymbolTable
+  -- ^ function scope symbol table
+  , blockCount :: Int
+  -- ^ all blocks
+  , count :: Word
+  -- ^ all unnamed instructions
+  , names :: Names
+  -- ^ name supply
   } deriving Show
 
 type SymbolTable = Map.Map String Operand
 
+-- | our codegen monad
 newtype Codegen a = Codegen { runCodegen :: State CodegenState a }
   deriving (Functor, Applicative, Monad, MonadState CodegenState )
+
+data BlockState = BlockState
+  { idx :: Int
+  -- ^ index
+  , stack :: [Named Instruction]
+  -- ^ instr stack
+  , term :: Maybe (Named Terminator)
+  -- ^ block terminator
+  } deriving Show
 
 createBlocks :: CodegenState -> [BasicBlock]
 createBlocks m = map makeBlock . sortBy (compare `on` (idx . snd))
@@ -86,7 +101,7 @@ execCodegen m = execState (runCodegen m) emptyCodegen
 fresh :: Codegen Word
 fresh = do
   i <- gets count
-  modify $ \s -> s { count = 1 + i }
+  modify $ \s -> s { count = i + 1 }
   pure $ i + 1
 
 instr :: Instruction -> Codegen Operand
@@ -99,20 +114,16 @@ instr ins = do
   pure $ local ref
 
 terminator :: Named Terminator -> Codegen (Named Terminator)
-terminator trm = do
+terminator t = do
   blk <- current
-  modifyBlock $ blk { term = Just trm }
-  pure trm
+  modifyBlock $ blk { term = Just t }
+  pure t
+
+local ::  Name -> Operand
+local = LocalReference double
 -- }}}
 
 -- Blocks {{{
-data BlockState
-  = BlockState {
-    idx   :: Int                            -- Block index
-  , stack :: [Named Instruction]            -- Stack of instructions
-  , term  :: Maybe (Named Terminator)       -- Block terminator
-  } deriving Show
-
 entry :: Codegen Name
 entry = gets currentBlock
 
@@ -147,13 +158,4 @@ current = do
   case Map.lookup c blks of
     Just x  -> pure x
     Nothing -> error $ "No such block: " <> show c
-
-local ::  Name -> Operand
-local = LocalReference double
-
-global ::  Name -> C.Constant
-global = C.GlobalReference double
-
-externf :: Name -> Operand
-externf = ConstantOperand . C.GlobalReference double
 -- }}}

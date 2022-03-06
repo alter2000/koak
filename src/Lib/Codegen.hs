@@ -50,15 +50,21 @@ getVar var = do
     Just x  -> pure x
     Nothing -> error $ "Local variable not in scope: " <> show var
 
+-- comfy LLVM use {{{
+global ::  Name -> C.Constant
+global = C.GlobalReference double
+
+cons :: C.Constant -> Operand
+cons = ConstantOperand
+
+externf :: Name -> Operand
+externf = ConstantOperand . C.GlobalReference double
 
 fadd, fsub, fmul, fdiv :: Operand -> Operand -> Codegen Operand
 fadd a b = instr $ FAdd noFastMathFlags a b []
 fsub a b = instr $ FSub noFastMathFlags a b []
 fmul a b = instr $ FMul noFastMathFlags a b []
 fdiv a b = instr $ FDiv noFastMathFlags a b []
-
-cons :: C.Constant -> Operand
-cons = ConstantOperand
 
 fcmp :: FP.FloatingPointPredicate -> Operand -> Operand -> Codegen Operand
 fcmp cond a b = instr $ FCmp cond a b []
@@ -90,3 +96,4 @@ cbr cond tr fl = terminator . Do $ CondBr cond tr fl []
 
 ret :: Operand -> Codegen (Named Terminator)
 ret val = terminator . Do $ Ret (Just val) []
+-- }}}

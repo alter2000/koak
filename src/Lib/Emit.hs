@@ -93,6 +93,37 @@ cgen (Fix (A.IfExpr cond if' else')) = do
   setBlock ifexit
   phi double [(blkTrue, ifthen), (blkFalse, ifelse)]
 
+cgen (Fix (A.ForExpr ivar start cond step body)) = do
+  forloop <- addBlock "for.loop"
+  forexit <- addBlock "for.exit"
+
+  -- %entry
+  ------------------
+  i <- alloca double
+  istart <- cgen start           -- Generate loop variable initial value
+  stepval <- cgen step           -- Generate loop variable step
+
+  store i istart                 -- Store the loop variable initial value
+  assign ivar i                  -- Assign loop variable to the variable name
+  br forloop                     -- Branch to the loop body block
+
+  -- for.loop
+  ------------------
+  setBlock forloop
+  cgen body                      -- Generate the loop body
+  ival <- load i                 -- Load the current loop iteration
+  inext <- fadd ival stepval     -- Increment loop variable
+  store i inext
+
+  cond <- cgen cond              -- Generate the loop condition
+  test <- fcmp FP.ONE false cond -- Test if the loop condition is True ( 1.0 )
+  cbr test forloop forexit       -- Generate the loop condition
+
+  -- for.exit
+  ------------------
+  setBlock forexit
+  return false
+
 liftError :: ExceptT String IO a -> IO a
 liftError = runExceptT >=> either fail pure
 
