@@ -35,7 +35,7 @@ data ASTF rec
   | WhileExpr rec rec
   | IfExpr rec rec rec
   | Call VarName [rec]
-  | Assignment VarName rec
+  | Let VarName rec rec
   | Function VarName [VarName] rec
   | Extern VarName [VarName]
   deriving (Eq, Show
@@ -65,7 +65,8 @@ instance Show1 ASTF where
   liftShowsPrec _ _ _  (Identifier s) = shows s
   liftShowsPrec spf _ p (BinOp s a b) =
     spf p a . shows (" " ++ show s ++ " ") . spf p b
-  liftShowsPrec spf _ p (Assignment s val) = shows (s ++ " = ") . spf p val
+  liftShowsPrec spf _ p (Let s val expr)
+    = shows (s ++ " = ") . spf p val . shows " in " . spf p expr
   liftShowsPrec spf _ p (UnOp  s a)   = shows s . shows " " . spf p a
   liftShowsPrec spf _ p (WhileExpr cond expr)
     = shows "while " . spf p cond
@@ -97,7 +98,7 @@ instance Eq1 ASTF where
   liftEq f (WhileExpr c1 e1) (WhileExpr c2 e2) = f c1 c2 && f e1 e2
   liftEq f (IfExpr c1 t1 e1) (IfExpr c2 t2 e2) = f c1 c2 && f t1 t2 && f e1 e2
   liftEq f (Call n1 a1) (Call n2 a2) = n1 == n2 && liftEq f a1 a2
-  liftEq f (Assignment n1 v1) (Assignment n2 v2) = n1 == n2 && f v1 v2
+  liftEq f (Let n1 v1 e1) (Let n2 v2 e2) = n1 == n2 && f v1 v2 && f e1 e2
   liftEq _ (Extern a argsA) (Extern b argsB) = a == b && argsA == argsB
   liftEq f (Function s1 a1 b1) (Function s2 a2 b2) = s1 == s2 && a1 == a2 && f b1 b2
   liftEq _ _ _ = False
@@ -131,8 +132,8 @@ mkIfExpr = ((Fix .) .) . IfExpr
 mkCall :: VarName -> [AST'] -> AST'
 mkCall = (Fix .) . Call
 
-mkAssignment :: VarName -> AST' -> AST'
-mkAssignment = (Fix .) . Assignment
+mkLet :: VarName -> AST' -> AST' -> AST'
+mkLet = ((Fix .) .) . Let
 
 mkFunction :: VarName -> [VarName] -> AST' -> AST'
 mkFunction = ((Fix .) .) . Function

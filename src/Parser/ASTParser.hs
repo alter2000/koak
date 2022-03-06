@@ -30,6 +30,7 @@ data ASTDerivs = ASTDerivs
   , adWhileExpr   :: Result ASTDerivs AST'
   , adComp        :: Result ASTDerivs AST'
   , adTopLevel    :: Result ASTDerivs [AST']
+  , adLetExpr     :: Result ASTDerivs AST'
 
   , adIgnore     :: Result ASTDerivs String
 
@@ -68,6 +69,7 @@ evalDerivs pos s = d where
     , adWhileExpr   = pWhileExpr d
     , adComp        = pComp d
     , adTopLevel    = pTopLevel d
+    , adLetExpr     = pLetExpr d
 
     , adIgnore = pIgnore d
     }
@@ -150,6 +152,18 @@ P pIfExpr = do
   string "else" >> spaces
   elseBody <- P adExpression
   return $ mkIfExpr cond thenBody elseBody
+
+pLetExpr :: ASTDerivs -> Result ASTDerivs AST'
+P pLetExpr = do
+  string "var" <* spaces
+  defs <- (do
+    var <- identifier <* spaces
+    char '=' <* spaces
+    val <- P adExpression
+    return (var, val)) `sepBy` (char ',' <* spaces)
+  string "in"
+  body <- P adExpression
+  pure $ foldr (uncurry mkLet) body defs
 
 pForExpr :: ASTDerivs -> Result ASTDerivs AST'
 P pForExpr = mkForExpr

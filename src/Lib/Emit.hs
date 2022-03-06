@@ -67,10 +67,12 @@ false = cons . C.Float $ F.Double 0.0
 cgen :: A.AST' -> Codegen AST.Operand
 cgen (Fix (A.UnOp op a)) = do  -- TODO: show op?
   cgen $ Fix $ A.Call ("unary" ++ show op) [a]
-cgen (Fix (A.Assignment var val)) = do
-  a <- getVar var
-  cval <- cgen val
-  store a cval >> pure cval
+cgen (Fix (A.Let var val expr)) = do
+  i <- alloca double
+  val <- cgen val
+  store i val
+  assign var i
+  cgen expr
 cgen (Fix (A.BinOp op a b)) = case Map.lookup op binops of
     Just f  -> (cgen b >>=) . f =<< cgen a
     Nothing -> error "No such operator"

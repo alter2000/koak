@@ -211,7 +211,18 @@ identifier :: Derivs d => Parser d [Char]
 identifier = satisfy ((:) <$> letter <*> many (letter <|> digit))
   $ flip notElem ks
   where
-    ks = ["def", "for", "extern", "in", "then", "if", "else", "while", "do"]
+    ks = [
+      "def",
+      "extern",
+      "for",
+      "var",
+      "in",
+      "if",
+      "then",
+      "else",
+      "while",
+      "do"
+      ]
 
 -- | Match any digit.
 digit :: Derivs d => Parser d Char
