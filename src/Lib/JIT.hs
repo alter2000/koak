@@ -49,8 +49,7 @@ runJIT mod = withContext $ \context -> jit context $ \executionEngine ->
 runInLLVMASM :: EE.ExecutionEngine e (FunPtr a)
              => Module -> e -> IO ()
 runInLLVMASM m executionEngine = do
-  s <- moduleLLVMAssembly m
-  -- ByteString.putStrLn s
+  moduleLLVMAssembly m -- >>= ByteString.putStrLn
   EE.withModuleInEngine executionEngine m $ \ee ->
     EE.getFunction ee "anon1" >>= \case
       Just fn -> run fn >>= \res -> putStrLn $ "Evaluated to: " ++ show res

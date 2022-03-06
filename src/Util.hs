@@ -72,7 +72,7 @@ threadMod :: [Phrase] -> Repl Bool
 threadMod ast = do
   mod <- lift get
   (r, m') <- liftIO $ handle (except >>> (>> pure (True, mod))) $ do
-    m' <- cgen ast >>= runJIT
+    m' <- cgen ast
     pure (True, m')
   lift (put m') >> pure r
 
@@ -84,7 +84,7 @@ interpretFile mod f = readFile f >>= either
 
 evalFile :: AST.Module -> [Phrase] -> IO AST.Module
 evalFile mod  [] = pure mod
-evalFile   _ ast = cgen ast >>= runJIT
+evalFile   _ ast = cgen ast
 
 -- | interpret list of files, then return resulting env and return value
 interpret :: AST.Module -> [String] -> IO AST.Module
