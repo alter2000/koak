@@ -60,6 +60,10 @@ binops = Map.fromList [
     , (A.LessThan, lt)
   ]
 
+true, false :: AST.Operand
+true  = cons . C.Float $ F.Double 1.0
+false = cons . C.Float $ F.Double 0.0
+
 cgen :: A.AST' -> Codegen AST.Operand
 cgen (Fix (A.UnOp op a)) = do  -- TODO: show op?
   cgen $ Fix $ A.Call ("unary" ++ show op) [a]
@@ -70,10 +74,24 @@ cgen (Fix (A.Assignment var val)) = do
 cgen (Fix (A.BinOp op a b)) = case Map.lookup op binops of
     Just f  -> (cgen b >>=) . f =<< cgen a
     Nothing -> error "No such operator"
+
 cgen (Fix (A.Identifier x)) = getVar x >>= load
-cgen (Fix (A.Literal n)) = return $ cons $ C.Float (F.Double n)
+cgen (Fix (A.Literal n)) = pure $ cons $ C.Float (F.Double n)
 cgen (Fix (A.Call fn args)) = traverse cgen args
   >>= call (externf (AST.Name $ packShort fn))
+
+cgen (Fix (A.IfExpr cond if' else')) = do
+  (ifthen, ifelse, ifexit) <- (,,)
+    <$> addBlock "if.then" <*> addBlock "if.else" <*> addBlock "if.exit"
+  cond <- cgen cond
+  test <- fcmp FP.ONE false cond
+  cbr test ifthen ifelse
+  blkTrue  <- setBlock ifthen >> cgen if'
+  ifthen   <- br ifexit >> getBlock
+  blkFalse <-setBlock ifelse >> cgen else'
+  ifelse   <- br ifexit >> getBlock
+  setBlock ifexit
+  phi double [(blkTrue, ifthen), (blkFalse, ifelse)]
 
 liftError :: ExceptT String IO a -> IO a
 liftError = runExceptT >=> either fail pure

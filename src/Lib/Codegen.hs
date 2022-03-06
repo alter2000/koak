@@ -57,11 +57,11 @@ fsub a b = instr $ FSub noFastMathFlags a b []
 fmul a b = instr $ FMul noFastMathFlags a b []
 fdiv a b = instr $ FDiv noFastMathFlags a b []
 
-fcmp :: FP.FloatingPointPredicate -> Operand -> Operand -> Codegen Operand
-fcmp cond a b = instr $ FCmp cond a b []
-
 cons :: C.Constant -> Operand
 cons = ConstantOperand
+
+fcmp :: FP.FloatingPointPredicate -> Operand -> Operand -> Codegen Operand
+fcmp cond a b = instr $ FCmp cond a b []
 
 uitofp :: Type -> Operand -> Codegen Operand
 uitofp ty a = instr $ UIToFP a ty []
@@ -78,6 +78,9 @@ store ptr val = instr $ Store False ptr val Nothing 0 []
 
 load :: Operand -> Codegen Operand
 load ptr = instr $ Load False ptr Nothing 0 []
+
+phi :: Type -> [(Operand, Name)] -> Codegen Operand
+phi ty incoming = instr $ Phi ty incoming []
 
 br :: Name -> Codegen (Named Terminator)
 br x = terminator . Do $ Br x []

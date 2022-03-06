@@ -8,7 +8,6 @@ import Types.Pos
 import Types.AST
 import Parser.ParserImpl
 import Parser.ParseError
-import Debug.Trace (trace)
 
 data ASTDerivs = ASTDerivs
   { adNatural     :: Result ASTDerivs AST'
@@ -92,9 +91,8 @@ pExpr :: ASTDerivs -> Result ASTDerivs [AST']
 P pExpr = P adTopLevel <* eof'
 
 pIgnore :: ASTDerivs -> Result ASTDerivs String
-P pIgnore = concat <$>
-    (optional spaces *> many (P pComment <* spaces))
-              <?> "non-code"
+P pIgnore = concat <$> (spaces *> many (P pComment <* spaces))
+  <?> "non-code"
 
 pTopLevel :: ASTDerivs -> Result ASTDerivs [AST']
 P pTopLevel = P adDefn `sepBy` (spaces >> char ';' >> spaces)
@@ -137,7 +135,8 @@ P pComp = do
   <?> "Comp"
 
 pFactor :: ASTDerivs -> Result ASTDerivs AST'
-P pFactor = P adFlowCont <|> P adUnaryOp <|> parens (P adExpression) <?> "Factor"
+P pFactor = P adFlowCont <|> P adUnaryOp <|> parens (P adExpression)
+  <?> "Factor"
 
 pFlowCont :: ASTDerivs -> Result ASTDerivs AST'
 P pFlowCont = P adIfExpr <|> P adForExpr <|> P adWhileExpr
@@ -176,7 +175,8 @@ P pUnaryOp =
   <?> "Unary"
 
 pPostfix :: ASTDerivs -> Result ASTDerivs AST'
-P pPostfix = P adExtern <|> P adFuncDecl <|> P adFuncCall <|> P adPrimary <?> "Postfix"
+P pPostfix = P adExtern <|> P adFuncDecl <|> P adFuncCall <|> P adPrimary
+  <?> "Postfix"
 
 pExtern :: ASTDerivs -> Result ASTDerivs AST'
 P pExtern = do

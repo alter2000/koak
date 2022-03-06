@@ -8,7 +8,6 @@ import Control.Monad
 
 import Types.Pos
 import Parser.ParseError
-import Debug.Trace (trace)
 
 -- Types {{{
 -- | Wrapper type for our parser, just '(->)' 'Derivs'.
