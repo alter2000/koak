@@ -141,7 +141,7 @@ P pFactor = P adFlowCont <|> P adUnaryOp <|> parens (P adExpression)
   <?> "Factor"
 
 pFlowCont :: ASTDerivs -> Result ASTDerivs AST'
-P pFlowCont = P adIfExpr <|> P adForExpr <|> P adWhileExpr
+P pFlowCont = P adIfExpr <|> P adLetExpr <|> P adForExpr <|> P adWhileExpr
 
 pIfExpr :: ASTDerivs -> Result ASTDerivs AST'
 P pIfExpr = do
@@ -161,7 +161,7 @@ P pLetExpr = do
     char '=' <* spaces
     val <- P adExpression
     return (var, val)) `sepBy` (char ',' <* spaces)
-  string "in"
+  string "in" <* spaces
   body <- P adExpression
   pure $ foldr (uncurry mkLet) body defs
 
