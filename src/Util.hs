@@ -21,6 +21,7 @@ import Parser.ParseError
 
 -- TODO
 import Types.Codegen
+import Lib.Codegen
 import Lib.JIT
 
 cgen :: [Phrase] -> IO AST.Module
