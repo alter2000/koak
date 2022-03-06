@@ -26,6 +26,7 @@ source-repository head
 
 library
   exposed-modules:
+      Lib.Codegen
       Lib.JIT
       Parser.ASTParser
       Parser.ParseError
@@ -42,13 +43,14 @@ library
       Paths_koak
   hs-source-dirs:
       src
-  ghc-options: -Wall -Wno-type-defaults -Wno-name-shadowing
+  ghc-options: -Wall -Wno-type-defaults -Wno-name-shadowing -Wall -Wno-type-defaults -Wno-name-shadowing
   build-depends:
       base >=4.7 && <5
     , bytestring
     , containers
     , haskeline
     , llvm-hs
+    , llvm-hs-pretty
     , llvm-hs-pure
     , mtl
     , pretty-simple
@@ -64,7 +66,7 @@ executable koak-exe
       Paths_koak
   hs-source-dirs:
       app
-  ghc-options: -Wall -Wno-type-defaults -Wno-name-shadowing -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -Wall -Wno-type-defaults -Wno-name-shadowing -threaded -rtsopts -with-rtsopts=-N -Wall -Wno-type-defaults -Wno-name-shadowing
   build-depends:
       base >=4.7 && <5
     , bytestring
@@ -72,6 +74,7 @@ executable koak-exe
     , haskeline
     , koak
     , llvm-hs
+    , llvm-hs-pretty
     , llvm-hs-pure
     , mtl
     , pretty-simple
@@ -99,6 +102,7 @@ test-suite koak-test
     , hspec
     , koak
     , llvm-hs
+    , llvm-hs-pretty
     , llvm-hs-pure
     , mtl
     , pretty-simple

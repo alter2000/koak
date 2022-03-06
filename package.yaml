@@ -27,6 +27,7 @@ dependencies:
 - recursion-schemes
 - llvm-hs
 - llvm-hs-pure
+- llvm-hs-pretty
 - pretty-simple
 - bytestring
 - text
@@ -34,13 +35,19 @@ dependencies:
 - haskeline
 # - microlens
 # - conduit
+
 ghc-options:
+- -Wall
+- -Wno-type-defaults
+- -Wno-name-shadowing
+
+library:
+  source-dirs: src
+  ghc-options:
   - -Wall
   - -Wno-type-defaults
   - -Wno-name-shadowing
 
-library:
-  source-dirs: src
 
 executables:
   koak-exe:
@@ -50,6 +57,9 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -Wall
+    - -Wno-type-defaults
+    - -Wno-name-shadowing
     dependencies:
     - koak
 

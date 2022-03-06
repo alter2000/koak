@@ -21,6 +21,10 @@ import Parser.ParseError
 
 -- TODO
 import Types.Codegen
+import Lib.JIT
+
+cgen :: [Phrase] -> IO AST.Module
+cgen = evalCodegen . codegenModule >=> runJIT
 
 -- | needs more flesh, usable while inside 'Control.Monad.Except.ExceptT'
 pExcept :: (String -> IO ()) -> IO a -> ParseError -> IO a
@@ -67,7 +71,7 @@ threadMod :: [Phrase] -> Repl Bool
 threadMod ast = do
   mod <- lift get
   (r, m') <- liftIO $ handle (except >>> (>> pure (True, mod))) $ do
-    m' <- cgen ast
+    m' <- cgen ast >>= runJIT
     pure (True, m')
   lift (put m') >> pure r
 
@@ -79,7 +83,7 @@ interpretFile mod f = readFile f >>= either
 
 evalFile :: AST.Module -> [Phrase] -> IO AST.Module
 evalFile mod  [] = pure mod
-evalFile   _ ast = cgen ast
+evalFile   _ ast = cgen ast >>= runJIT
 
 -- | interpret list of files, then return resulting env and return value
 interpret :: AST.Module -> [String] -> IO AST.Module

@@ -191,7 +191,7 @@ noneOf chs = satisfy anyChar (`notElem` chs)
 
 -- | @string s@ matches all the characters in @s@ in sequence.
 string :: Derivs d => String -> Parser d String
-string s@(x:xs) = ((:) <$> char x <*> string xs <?> show s)
+string s@(x:xs) = (:) <$> char x <*> string xs <?> show s
 string [] = pure []
 
 -- | @stringFrom ss@ matches any string in @ss@. If any strings in @ss@ are
@@ -210,19 +210,8 @@ alphaNum = satisfy anyChar isAlphaNum <?> "letter or digit"
 identifier :: Derivs d => Parser d [Char]
 identifier = satisfy ((:) <$> letter <*> many (letter <|> digit))
   $ flip notElem ks
-  where
-    ks = [
-      "def",
-      "extern",
-      "for",
-      "var",
-      "in",
-      "if",
-      "then",
-      "else",
-      "while",
-      "do"
-      ]
+  where ks = ["def", "var", "extern", "for", "in",
+              "if", "then", "else", "while", "do"]
 
 -- | Match any digit.
 digit :: Derivs d => Parser d Char

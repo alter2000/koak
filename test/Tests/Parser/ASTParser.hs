@@ -1,3 +1,5 @@
+{- HLINT ignore -}
+
 module Tests.Parser.ASTParser
   where
 

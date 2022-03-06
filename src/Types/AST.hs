@@ -1,5 +1,4 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE DeriveTraversable #-}
 -- | Everything getting us from the language into an AST
 -- and from an AST into a better AST
 module Types.AST
