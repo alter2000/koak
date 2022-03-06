@@ -25,7 +25,7 @@ import Lib.Codegen
 import Lib.JIT
 
 cgen :: [Phrase] -> IO AST.Module
-cgen = evalCodegen . codegenModule >=> runJIT
+cgen = evalCodegen . codegenModule "<stdin>" >=> runJIT
 
 -- | needs more flesh, usable while inside 'Control.Monad.Except.ExceptT'
 pExcept :: (String -> IO ()) -> IO a -> ParseError -> IO a
@@ -80,11 +80,11 @@ threadMod ast = do
 interpretFile :: AST.Module -> FilePath -> IO AST.Module
 interpretFile mod f = readFile f >>= either
   (pExcept (hPutStrLn stderr) (exitWith (ExitFailure 84)))
-  (evalFile mod) . parseFile f
+  (evalFile f mod) . parseFile f
 
-evalFile :: AST.Module -> [Phrase] -> IO AST.Module
-evalFile mod  [] = pure mod
-evalFile   _ ast = cgen ast
+evalFile :: FilePath -> AST.Module -> [Phrase] -> IO AST.Module
+evalFile _ mod [] = pure mod
+evalFile f  _ ast = evalCodegen (codegenModule f ast) >>= runJIT
 
 -- | interpret list of files, then return resulting env and return value
 interpret :: AST.Module -> [String] -> IO AST.Module

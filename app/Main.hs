@@ -4,14 +4,16 @@ module Main where
 import Control.Exception ( handle )
 import System.Environment ( getArgs )
 
-import Util ( halt, interpret, repl, primEnv )
+import Util
+import Text.Pretty.Simple
 
 main :: IO ()
 main = handle halt $ getArgs >>= \case
   [] -> repl primEnv
   ["-i"] -> repl primEnv
-  as | "-i" `elem` as && "-i" `isLast` as -> (dropI as >>= interpret primEnv) >>= repl
-  as -> dropI as >>= interpret primEnv >>= print
+  as -> interpret primEnv as >>= pPrint
+  -- as | "-i" `elem` as && "-i" `isLast` as ->
+  --   (dropI as >>= interpret primEnv) >>= repl
 
 isLast :: Eq a => a -> [a] -> Bool
 isLast _ [] = False

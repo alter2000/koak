@@ -123,13 +123,13 @@ funGen args body ops = do
     lift $ assignvar name a
   codegen body >>= ret
 
-codegenModule :: [A.Phrase] -> Codegen Module
-codegenModule phrases = do
+codegenModule :: FilePath -> [A.Phrase] -> Codegen Module
+codegenModule fp phrases = do
   modDefs <- gets modDefinitions
   anonPhrases <- traverse toAnon phrases
   defs <- IRB.execModuleBuilderT IRB.emptyModuleBuilder
     (mapM_ codegenDefn anonPhrases)
   let defs' = modDefs ++ defs
   modify (\s -> s {modDefinitions = defs'})
-  IRB.buildModuleT (packShort "<stdin>") (traverse IRB.emitDefn defs')
+  IRB.buildModuleT (packShort fp) (traverse IRB.emitDefn defs')
   -- liftIO (T.putStrLn (ppllvm mod))
