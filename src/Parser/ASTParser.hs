@@ -99,7 +99,7 @@ P pIgnore = concat <$> (spaces *> many (P pComment <* spaces))
   <?> "non-code"
 
 pTopLevel :: ASTDerivs -> Result ASTDerivs [AST']
-P pTopLevel = P adDefn `sepBy` (spaces >> char ';' >> spaces)
+P pTopLevel = (P adDefn `sepBy` (spaces >> char ';' >> spaces)) <* many (char ';')
 
 pDefn :: ASTDerivs -> Result ASTDerivs AST'
 P pDefn = P adExtern <|> P adFuncDecl <|> P adExpression
