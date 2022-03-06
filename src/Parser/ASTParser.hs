@@ -19,6 +19,7 @@ data ASTDerivs = ASTDerivs
   , adUnaryOp     :: Result ASTDerivs AST'
   , adPostfix     :: Result ASTDerivs AST'
   , adExpression  :: Result ASTDerivs AST'
+  , adArithmetics :: Result ASTDerivs AST'
   , adTerm        :: Result ASTDerivs AST'
   , adFactor      :: Result ASTDerivs AST'
   , adFlowCont    :: Result ASTDerivs AST'
@@ -58,6 +59,7 @@ evalDerivs pos s = d where
     , adUnaryOp     = pUnaryOp d
     , adPostfix     = pPostfix d
     , adExpression  = pExpression d
+    , adArithmetics = pArithmetics d
     , adTerm        = pTerm d
     , adFactor      = pFactor d
     , adFlowCont    = pFlowCont d
@@ -104,6 +106,13 @@ P pDefn = P adExtern <|> P adFuncDecl <|> P adExpression
 
 pExpression :: ASTDerivs -> Result ASTDerivs AST'
 P pExpression = do
+  first <- P adArithmetics <* spaces
+  foll <- many ((char '=' <* spaces) *> (P adArithmetics <* spaces))
+  return (foldl (mkBinOp Assignment) first foll)
+  <?> "Assignment"
+
+pArithmetics :: ASTDerivs -> Result ASTDerivs AST'
+P pArithmetics = do
   first <- P adTerm <* spaces
   foll <- many ((,) <$> (oneOf "+-" <* spaces) <*> (P adTerm <* spaces))
   return (foldl foldFn first foll) <?> "Expression"
@@ -132,7 +141,7 @@ P pComp = do
     ">" -> mkBinOp MoreThan a b
     "==" -> mkBinOp Equality a b
     "!=" -> mkBinOp Difference a b
-    s -> mkBinOp (Err s) a b
+    _ -> undefined
   <|> P adFactor
   <?> "Comp"
 

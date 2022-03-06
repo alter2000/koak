@@ -54,7 +54,7 @@ data BinFunc
   | MoreThan
   | Equality
   | Difference
-  | Err String
+  | Assignment
   deriving (Eq, Ord, Show)
 
 -- Instances {{{
