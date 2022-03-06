@@ -25,7 +25,6 @@ import LLVM.AST.AddrSpace
 import qualified LLVM.AST.Constant as C
 import qualified LLVM.AST.FloatingPointPredicate as AST
 import LLVM.IRBuilder as IRB
-import qualified LLVM.PassManager as LLPM
 
 cgen :: [A.Phrase] -> IO Module
 cgen = evalCodegen . codegenModule
@@ -60,20 +59,19 @@ ptrTy :: [Type] -> Type
 ptrTy atys = PointerType (FunctionType doubleTy atys False) (AddrSpace 0)
 
 getVar :: Name -> ModuleBuilderT Codegen Operand
-getVar name = do
-  res <- gets (Map.lookup name . symbolTable)
-  case res of
-    Just x -> pure x
-    Nothing -> error ("unknown variable: " ++ show name)
+getVar name = gets (Map.lookup name . symbolTable) >>= \case
+  Just x  -> pure x
+  Nothing -> error ("unknown variable: " ++ show name)
 
 getFun :: Name -> [Type] -> ModuleBuilderT Codegen Operand
 getFun name tys = gets symbolTable >>= (\case
-    Just x -> pure x
-    Nothing -> pure . ConstantOperand
-      $ C.GlobalReference (ptrTy tys) name) . Map.lookup name
+  Just x -> pure x
+  Nothing -> pure . ConstantOperand
+    $ C.GlobalReference (ptrTy tys) name) . Map.lookup name
 
 assignvar :: Name -> Operand -> ModuleBuilderT Codegen ()
-assignvar name var = modify (\s -> s {symbolTable = Map.insert name var (symbolTable s)})
+assignvar name var = modify (\s -> s
+  {symbolTable = Map.insert name var (symbolTable s)})
 -- }}}
 
 -- actual gen {{{
@@ -154,17 +152,16 @@ codegenDefn (A.Extern name args) = do
     pure extOp
 
 codegenDefn (A.Function name args body) = do
-    fnOp <- undefined LLVM.AST.function name
+    fnOp <- IRB.function name
       [(doubleTy, ParameterName (unpackName nm)) | nm <- args]
-      doubleTy
-      $ \ops -> do
-        _ <- block `named` "entry"
-        forM_ (zip args ops) $ \(name, arg) -> do
-          a <- alloca doubleTy Nothing 0
-          store a 0 arg
-          lift $ assignvar name a
-        retval <- codegen body
-        ret retval
+      doubleTy $ \ops -> do
+          _ <- block `named` "entry"
+          forM_ (zip args ops) $ \(name, arg) -> do
+            a <- alloca doubleTy Nothing 0
+            store a 0 arg
+            lift $ assignvar name a
+          retval <- codegen body
+          ret retval
     modify $ \s -> s {functionTable = Map.insert name fnOp (functionTable s)}
     pure fnOp
 
@@ -204,12 +201,10 @@ toAnon (A.ExprPhrase e) = do
   modify $ \s -> s {nameSupply=lastId + 1}
   pure $ A.Function (prefixName "anon" newId) [] e
 
-getLastAnon :: Codegen (Maybe String)
-getLastAnon = gets nameSupply >>= \lastId ->
-  pure $ if lastId == 0
-            then Nothing
-            else Just $ "anon" ++ show lastId
+-- getLastAnon :: Codegen (Maybe String)
+-- getLastAnon = gets nameSupply >>= \lastId ->
+--   pure $ if lastId == 0
+--             then Nothing
+--             else Just $ "anon" ++ show lastId
 
-passes :: LLPM.PassSetSpec
-passes = LLPM.defaultCuratedPassSetSpec {LLPM.optLevel = Just 1}
 -- }}}

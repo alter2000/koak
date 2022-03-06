@@ -78,8 +78,8 @@ interpretFile mod f = readFile f >>= either
   (evalFile mod) . parseFile f
 
 evalFile :: AST.Module -> [Phrase] -> IO AST.Module
-evalFile env  [] = pure env
-evalFile env ast = cgen ast
+evalFile mod  [] = pure mod
+evalFile   _ ast = cgen ast
 
 -- | interpret list of files, then return resulting env and return value
 interpret :: AST.Module -> [String] -> IO AST.Module
