@@ -192,7 +192,7 @@ noneOf chs = satisfy anyChar (`notElem` chs)
 
 -- | @string s@ matches all the characters in @s@ in sequence.
 string :: Derivs d => String -> Parser d String
-string s@(x:xs) = trace s ((:) <$> char x <*> string xs <?> show s)
+string s@(x:xs) = ((:) <$> char x <*> string xs <?> show s)
 string [] = pure []
 
 -- | @stringFrom ss@ matches any string in @ss@. If any strings in @ss@ are

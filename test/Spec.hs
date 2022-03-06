@@ -20,3 +20,5 @@ main :: IO ()
 main = hspec $ do
   literalsParserTest
   keywordsParserTest
+  ifExprParserTest
+  forExprParserTest

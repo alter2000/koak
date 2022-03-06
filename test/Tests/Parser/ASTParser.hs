@@ -7,38 +7,49 @@ import Parser.ASTParser
 import Types.AST
 
 literalsParserTest :: SpecWith ()
-literalsParserTest = describe "Parser.ASTParser" $ do
+literalsParserTest = describe "Literals" $ do
   it "should make 123 from \"123\"" $ do
-    parse "123" `shouldBe` Right (mkBlock [mkLiteral 123.0])
+    parse "123" `shouldBe` Right [mkLiteral 123.0]
   it "should make 123 from \"(123)\"" $ do
-    parse "(123)" `shouldBe` Right (mkBlock [mkLiteral 123.0])
+    parse "(123)" `shouldBe` Right [mkLiteral 123.0]
   it "should make 123 from \"123.0\"" $ do
-    parse "123.0" `shouldBe` Right (mkBlock [mkLiteral 123.0])
+    parse "123.0" `shouldBe` Right [mkLiteral 123.0]
   it "should make 123 from \"(123.0)\"" $ do
-    parse "(123.0)" `shouldBe` Right (mkBlock [mkLiteral 123.0])
+    parse "(123.0)" `shouldBe` Right [mkLiteral 123.0]
   it "should make foo identifier from \"foo\"" $ do
-    parse "foo" `shouldBe` Right (mkBlock [mkIdentifier "foo"])
+    parse "foo" `shouldBe` Right [mkIdentifier "foo"]
   it "should make foo identifier from \"(foo)\"" $ do
-    parse "(foo)" `shouldBe` Right (mkBlock [mkIdentifier "foo"])
+    parse "(foo)" `shouldBe` Right [mkIdentifier "foo"]
 
 keywordsParserTest :: SpecWith ()
-keywordsParserTest = describe "Parser.ASTParser" $ do
+keywordsParserTest = describe "Keywords" $ do
   it "should make extern foo from \"extern foo()\"" $ do
-    parse "extern foo()" `shouldBe` Right (mkBlock [mkExtern "foo" []])
+    parse "extern foo()" `shouldBe` Right [mkExtern "foo" []]
   it "should make extern foo a b from \"extern foo(a b)\"" $ do
-    parse "extern foo(a b)" `shouldBe` Right (mkBlock [mkExtern "foo" ["a", "b"]])
+    parse "extern foo(a b)" `shouldBe` Right [mkExtern "foo" ["a", "b"]]
   it "should make def foo from \"def foo() 123.0\"" $ do
-    parse "def foo() 123.0" `shouldBe` Right (mkBlock [mkFunction "foo" [] (mkLiteral 123.0)])
+    parse "def foo() 123.0"
+    `shouldBe` Right [mkFunction "foo" [] (mkLiteral 123.0)]
   it "should make def foo a b from \"def foo(a b) 123.0\"" $ do
-    parse "def foo(a b) 123.0" `shouldBe` Right (mkBlock [mkFunction "foo" ["a", "b"] (mkLiteral 123.0)])
+    parse "def foo(a b) 123.0"
+    `shouldBe` Right [mkFunction "foo" ["a", "b"] (mkLiteral 123.0)]
 
-flowControlParserTest :: SpecWith ()
-flowControlParserTest = describe "Parser.ASTParser" $ do
-  it "should make if foo then bar else 123" $ do
-    parse "if foo then bar else 123"
+ifExprParserTest :: SpecWith ()
+ifExprParserTest = describe "If Expressions" $ do
+  it "should make if from \"if foo>2 then bar else 123\"" $ do
+    parse "if foo>2 then bar else 123"
     `shouldBe`
-    Right (mkBlock [mkIfExpr (mkIdentifier "foo") (mkIdentifier "bar") (mkLiteral 123.0)])
-  it "should make for a = 1, a < 3, a + 1 in 123" $ do
-    parse "for a = 1, a < 3, a + 1 in 123"
+    Right [mkIfExpr
+      (mkBinOp MoreThan (mkIdentifier "foo") (mkLiteral 2))
+      (mkIdentifier "bar")
+      (mkLiteral 123.0)]
+
+forExprParserTest :: SpecWith ()
+forExprParserTest = describe "For Expressions" $ do
+  it "should make for from \"for a = 1, a < 3, a + 1 in 123*2\"" $ do
+    parse "for a = 1, a < 3, a + 1 in 123*2"
     `shouldBe`
-    Right (mkBlock [mkIfExpr (mkIdentifier "foo") (mkIdentifier "bar") (mkLiteral 123.0)])
+    Right [mkForExpr "a" (mkLiteral 1)
+      (mkBinOp LessThan (mkIdentifier "a") (mkLiteral 3))
+      (mkBinOp Plus (mkIdentifier "a") (mkLiteral 1))
+      (mkBinOp Times (mkLiteral 123) (mkLiteral 2))]
