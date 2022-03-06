@@ -8,14 +8,23 @@ import Data.Function
 
 import LLVM.AST
 
+import Types.AST
+
 import Control.Monad.State
 import qualified Data.ByteString.Internal as BS
 import qualified Data.ByteString.Short as BSS
 import qualified Data.Map.Strict as Map
+import qualified LLVM.AST as AST
 
 -- Module level {{{
 newtype LLVM a = LLVM { unLLVM :: State Module a }
   deriving (Functor, Applicative, Monad, MonadState Module )
+
+evalCodegen :: Codegen a -> IO a
+evalCodegen = undefined
+
+codegenModule :: [Phrase] -> Codegen AST.Module
+codegenModule = undefined
 
 runLLVM :: Module -> LLVM a -> Module
 runLLVM = flip (execState . unLLVM)

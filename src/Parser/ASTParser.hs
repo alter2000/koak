@@ -10,28 +10,28 @@ import Parser.ParserImpl
 import Parser.ParseError
 
 data ASTDerivs = ASTDerivs
-  { adNatural     :: Result ASTDerivs AST'
-  , adDecimal     :: Result ASTDerivs AST'
-  , adLiteral     :: Result ASTDerivs AST'
-  , adIdentifier  :: Result ASTDerivs AST'
-  , adPrimary     :: Result ASTDerivs AST'
-  , adFuncCall    :: Result ASTDerivs AST'
-  , adUnaryOp     :: Result ASTDerivs AST'
-  , adPostfix     :: Result ASTDerivs AST'
-  , adExpression  :: Result ASTDerivs AST'
-  , adArithmetics :: Result ASTDerivs AST'
-  , adTerm        :: Result ASTDerivs AST'
-  , adFactor      :: Result ASTDerivs AST'
-  , adFlowCont    :: Result ASTDerivs AST'
-  , adExtern      :: Result ASTDerivs AST'
-  , adFuncDecl    :: Result ASTDerivs AST'
-  , adDefn        :: Result ASTDerivs AST'
-  , adIfExpr      :: Result ASTDerivs AST'
-  , adForExpr     :: Result ASTDerivs AST'
-  , adWhileExpr   :: Result ASTDerivs AST'
-  , adComp        :: Result ASTDerivs AST'
-  , adTopLevel    :: Result ASTDerivs [AST']
-  , adLetExpr     :: Result ASTDerivs AST'
+  { adNatural     :: Result ASTDerivs ASTF
+  , adDecimal     :: Result ASTDerivs ASTF
+  , adLiteral     :: Result ASTDerivs ASTF
+  , adIdentifier  :: Result ASTDerivs ASTF
+  , adPrimary     :: Result ASTDerivs ASTF
+  , adFuncCall    :: Result ASTDerivs ASTF
+  , adUnaryOp     :: Result ASTDerivs ASTF
+  , adPostfix     :: Result ASTDerivs ASTF
+  , adExpression  :: Result ASTDerivs ASTF
+  , adArithmetics :: Result ASTDerivs ASTF
+  , adTerm        :: Result ASTDerivs ASTF
+  , adFactor      :: Result ASTDerivs ASTF
+  , adFlowCont    :: Result ASTDerivs ASTF
+  , adExtern      :: Result ASTDerivs Defn
+  , adFuncDecl    :: Result ASTDerivs Defn
+  , adDefn        :: Result ASTDerivs Phrase
+  , adIfExpr      :: Result ASTDerivs ASTF
+  , adForExpr     :: Result ASTDerivs ASTF
+  , adWhileExpr   :: Result ASTDerivs ASTF
+  , adComp        :: Result ASTDerivs ASTF
+  , adTopLevel    :: Result ASTDerivs [Phrase]
+  , adLetExpr     :: Result ASTDerivs ASTF
 
   , adIgnore     :: Result ASTDerivs String
 
@@ -76,42 +76,42 @@ evalDerivs pos s = d where
     , adIgnore = pIgnore d
     }
 
-parse :: String -> Either ParseError [AST']
+parse :: String -> Either ParseError [Phrase]
 parse s = case pExpr $ evalDerivs (Pos "<stdin>" 1 1) s of
     Parsed v _ _ -> Right v
     NoParse e -> Left e
 
-testParser :: (ASTDerivs -> Result ASTDerivs AST') -> String -> Either ParseError AST'
+testParser :: (ASTDerivs -> Result ASTDerivs ASTF) -> String -> Either ParseError ASTF
 testParser p s = case p $ evalDerivs (Pos "<stdin>" 1 1) s of
     Parsed v _ _ -> Right v
     NoParse e -> Left e
 
-parseFile :: FilePath -> String -> Either ParseError [AST']
+parseFile :: FilePath -> String -> Either ParseError [Phrase]
 parseFile fname s = case pExpr $ evalDerivs (Pos fname 1 1) s of
     Parsed v _ _ -> Right v
     NoParse e -> Left e
 
-pExpr :: ASTDerivs -> Result ASTDerivs [AST']
+pExpr :: ASTDerivs -> Result ASTDerivs [Phrase]
 P pExpr = P adTopLevel <* eof'
 
 pIgnore :: ASTDerivs -> Result ASTDerivs String
 P pIgnore = concat <$> (spaces *> many (P pComment <* spaces))
   <?> "non-code"
 
-pTopLevel :: ASTDerivs -> Result ASTDerivs [AST']
+pTopLevel :: ASTDerivs -> Result ASTDerivs [Phrase]
 P pTopLevel = (P adDefn `sepBy` (spaces >> char ';' >> spaces)) <* many (char ';')
 
-pDefn :: ASTDerivs -> Result ASTDerivs AST'
-P pDefn = P adExtern <|> P adFuncDecl <|> P adExpression
+pDefn :: ASTDerivs -> Result ASTDerivs Phrase
+P pDefn = (DefnPhrase <$> (P adExtern <|> P adFuncDecl)) <|> (ExprPhrase <$> P adExpression)
 
-pExpression :: ASTDerivs -> Result ASTDerivs AST'
+pExpression :: ASTDerivs -> Result ASTDerivs ASTF
 P pExpression = do
   first <- P adArithmetics <* spaces
   foll <- many ((char '=' <* spaces) *> (P adArithmetics <* spaces))
   return (foldl (mkBinOp Assignment) first foll)
   <?> "Assignment"
 
-pArithmetics :: ASTDerivs -> Result ASTDerivs AST'
+pArithmetics :: ASTDerivs -> Result ASTDerivs ASTF
 P pArithmetics = do
   first <- P adTerm <* spaces
   foll <- many ((,) <$> (oneOf "+-" <* spaces) <*> (P adTerm <* spaces))
@@ -121,7 +121,7 @@ P pArithmetics = do
       foldFn acc ('+', e) = mkBinOp Plus acc e
       foldFn _ _ = undefined
 
-pTerm :: ASTDerivs -> Result ASTDerivs AST'
+pTerm :: ASTDerivs -> Result ASTDerivs ASTF
 P pTerm = do
     first <- P adComp <* spaces
     foll <- many ((,) <$> (oneOf "*/" <* spaces) <*> (P adComp <* spaces))
@@ -131,7 +131,7 @@ P pTerm = do
             foldFn acc ('*', e) = mkBinOp Times acc e
             foldFn _ _ = undefined
 
-pComp :: ASTDerivs -> Result ASTDerivs AST'
+pComp :: ASTDerivs -> Result ASTDerivs ASTF
 P pComp = do
   a <- P adFactor <* spaces
   op <- (string ">" <|> string "<" <|> string "==" <|> string "!=") <* spaces
@@ -145,14 +145,14 @@ P pComp = do
   <|> P adFactor
   <?> "Comp"
 
-pFactor :: ASTDerivs -> Result ASTDerivs AST'
+pFactor :: ASTDerivs -> Result ASTDerivs ASTF
 P pFactor = P adFlowCont <|> P adUnaryOp <|> parens (P adExpression)
   <?> "Factor"
 
-pFlowCont :: ASTDerivs -> Result ASTDerivs AST'
+pFlowCont :: ASTDerivs -> Result ASTDerivs ASTF
 P pFlowCont = P adIfExpr <|> P adLetExpr <|> P adForExpr <|> P adWhileExpr
 
-pIfExpr :: ASTDerivs -> Result ASTDerivs AST'
+pIfExpr :: ASTDerivs -> Result ASTDerivs ASTF
 P pIfExpr = do
   string "if" >> spaces
   cond <- P adExpression <* spaces
@@ -162,7 +162,7 @@ P pIfExpr = do
   elseBody <- P adExpression
   return $ mkIfExpr cond thenBody elseBody
 
-pLetExpr :: ASTDerivs -> Result ASTDerivs AST'
+pLetExpr :: ASTDerivs -> Result ASTDerivs ASTF
 P pLetExpr = do
   string "var" <* spaces
   defs <- (do
@@ -174,7 +174,7 @@ P pLetExpr = do
   body <- P adExpression
   pure $ foldr (uncurry mkLet) body defs
 
-pForExpr :: ASTDerivs -> Result ASTDerivs AST'
+pForExpr :: ASTDerivs -> Result ASTDerivs ASTF
 P pForExpr = mkForExpr
   <$> (string "for" *> spaces *> identifier)
   <*> ((spaces *> char '=' *> spaces) *> P adExpression)
@@ -183,32 +183,32 @@ P pForExpr = mkForExpr
   <*> ((spaces *> string "in" *> spaces) *> P adExpression)
   <?> "FOR"
 
-pWhileExpr :: ASTDerivs -> Result ASTDerivs AST'
+pWhileExpr :: ASTDerivs -> Result ASTDerivs ASTF
 P pWhileExpr = do
   string "while" >> spaces
   cond <- P adExpression
   string "do" >> spaces
   mkWhileExpr cond <$> P adExpression
 
-pUnaryOp :: ASTDerivs -> Result ASTDerivs AST'
+pUnaryOp :: ASTDerivs -> Result ASTDerivs ASTF
 P pUnaryOp =
   ((mkUnOp Invert <$ char '!' <|> mkUnOp Neg <$ char '-')
   <*> (P adUnaryOp <|> P adPostfix))
   <|> P adPostfix
   <?> "Unary"
 
-pPostfix :: ASTDerivs -> Result ASTDerivs AST'
-P pPostfix = P adExtern <|> P adFuncDecl <|> P adFuncCall <|> P adPrimary
+pPostfix :: ASTDerivs -> Result ASTDerivs ASTF
+P pPostfix = P adFuncCall <|> P adPrimary
   <?> "Postfix"
 
-pExtern :: ASTDerivs -> Result ASTDerivs AST'
+pExtern :: ASTDerivs -> Result ASTDerivs Defn
 P pExtern = do
  string "extern" >> some space
  name <- identifier
  args <- parens (identifier `sepBy` spaces)
  pure $ mkExtern name args
 
-pFuncDecl :: ASTDerivs -> Result ASTDerivs AST'
+pFuncDecl :: ASTDerivs -> Result ASTDerivs Defn
 P pFuncDecl = do
   string "def" >> some space
   name <- identifier
@@ -216,27 +216,27 @@ P pFuncDecl = do
   body <- P adExpression
   pure $ mkFunction name args body
 
-pFuncCall :: ASTDerivs -> Result ASTDerivs AST'
+pFuncCall :: ASTDerivs -> Result ASTDerivs ASTF
 P pFuncCall = do
   name <- identifier
   arg <- parens $ optional $ P adExpression `sepBy` (spaces >> char ',' >> spaces)
   return $ mkCall name (fromMaybe [] arg)
   <?> "Call"
 
-pPrimary :: ASTDerivs -> Result ASTDerivs AST'
+pPrimary :: ASTDerivs -> Result ASTDerivs ASTF
 P pPrimary = P adLiteral <|> P adIdentifier <?> "Primary"
 
-pIdentifier :: ASTDerivs -> Result ASTDerivs AST'
+pIdentifier :: ASTDerivs -> Result ASTDerivs ASTF
 P pIdentifier = mkIdentifier <$> identifier <?> "Identifier"
 
 {- HLINT ignore "Avoid restricted function" -}
-pLiteral :: ASTDerivs -> Result ASTDerivs AST'
+pLiteral :: ASTDerivs -> Result ASTDerivs ASTF
 P pLiteral = P adDecimal <|> P adNatural <?> "Literal"
 
-pNatural :: ASTDerivs -> Result ASTDerivs AST'
+pNatural :: ASTDerivs -> Result ASTDerivs ASTF
 P pNatural = mkLiteral . read <$> some digit <?> "integer"
 
-pDecimal :: ASTDerivs -> Result ASTDerivs AST'
+pDecimal :: ASTDerivs -> Result ASTDerivs ASTF
 P pDecimal = mkLiteral . read <$> do
     n <- many digit
     dt <- char '.'
