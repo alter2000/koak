@@ -35,14 +35,13 @@ verifyAndRecover m = catch (verify m >> pure "") (\e -> pure
   $ "\nVerification error:\n" ++ show (e :: SomeException) ++ "\n")
 
 passes :: PassSetSpec
-passes = defaultCuratedPassSetSpec {optLevel = Just 3}
+passes = defaultCuratedPassSetSpec {optLevel = Just 2}
 
 runJIT :: AST.Module -> IO AST.Module
 runJIT mod = withContext $ \context -> jit context $ \executionEngine ->
   withModuleFromAST context mod $ \m -> withPassManager passes $ \pm -> do
-    -- runPassManager pm m
-    verify m
-    verifyErr <- verifyAndRecover m
+    runPassManager pm m
+    verifyAndRecover m
     optmod <- moduleAST m
     runInLLVMASM m executionEngine
     pure optmod
@@ -51,8 +50,8 @@ runInLLVMASM :: EE.ExecutionEngine e (FunPtr a)
              => Module -> e -> IO ()
 runInLLVMASM m executionEngine = do
   s <- moduleLLVMAssembly m
-  ByteString.putStrLn s
+  -- ByteString.putStrLn s
   EE.withModuleInEngine executionEngine m $ \ee ->
-    EE.getFunction ee "anon5" >>= \case
+    EE.getFunction ee "anon1" >>= \case
       Just fn -> run fn >>= \res -> putStrLn $ "Evaluated to: " ++ show res
       Nothing -> putStrLn "Could not evaluate main function"
