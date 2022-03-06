@@ -110,4 +110,10 @@ mkFunction fname args = Function (mkName fname) (mkName <$> args)
 mkExtern :: String -> [String] -> Defn
 mkExtern ename args = Extern (mkName ename) (mkName <$> args)
 
+mkBinaryDef :: String -> [String] -> AST -> Defn
+mkBinaryDef fname args = BinaryDef (mkName fname) (mkName <$> args)
+
+mkUnaryDef :: String -> String -> AST -> Defn
+mkUnaryDef fname arg = UnaryDef (mkName fname) (mkName arg)
+
 -- }}}

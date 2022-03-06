@@ -26,6 +26,8 @@ data ASTDerivs = ASTDerivs
   , adFlowCont    :: Result ASTDerivs AST
   , adExtern      :: Result ASTDerivs Defn
   , adFuncDecl    :: Result ASTDerivs Defn
+  , adBinaryDef   :: Result ASTDerivs Defn
+  , adUnaryDef    :: Result ASTDerivs Defn
   , adDefn        :: Result ASTDerivs Phrase
   , adIfExpr      :: Result ASTDerivs AST
   , adForExpr     :: Result ASTDerivs AST
@@ -65,6 +67,8 @@ evalDerivs pos s = d where
     , adFlowCont    = pFlowCont d
     , adExtern      = pExtern d
     , adFuncDecl    = pFuncDecl d
+    , adBinaryDef   = pBinaryDef d
+    , adUnaryDef    = pUnaryDef d
     , adDefn        = pDefn d
     , adIfExpr      = pIfExpr d
     , adForExpr     = pForExpr d
@@ -81,8 +85,8 @@ parse s = case pExpr $ evalDerivs (Pos "<stdin>" 1 1) s of
     Parsed v _ _ -> Right v
     NoParse e -> Left e
 
-testParser :: (ASTDerivs -> Result ASTDerivs AST)
-           -> String -> Either ParseError AST
+testParser :: (ASTDerivs -> Result ASTDerivs a)
+           -> String -> Either ParseError a
 testParser p s = case p $ evalDerivs (Pos "<stdin>" 1 1) s of
     Parsed v _ _ -> Right v
     NoParse e -> Left e
@@ -103,15 +107,49 @@ P pTopLevel = (P adDefn `sepBy` (spaces >> char ';' >> spaces))
   <* many (char ';')
 
 pDefn :: ASTDerivs -> Result ASTDerivs Phrase
-P pDefn = (DefnPhrase <$> (P adExtern <|> P adFuncDecl))
+P pDefn = (DefnPhrase <$> (P adExtern <|> P adFuncDecl <|> P adBinaryDef <|> P adUnaryDef))
   <|> (ExprPhrase <$> P adExpression)
+
+pBinaryDef :: ASTDerivs -> Result ASTDerivs Defn
+P pBinaryDef = do
+  string "def" <* spaces
+  string "binary" <* spaces
+  o <- some $ noneOf $ "()" ++ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9']
+  args <- parens (identifier `sepBy` some space) <* spaces
+  body <- P adExpression
+  pure $ mkBinaryDef o args body
+
+pUnaryDef :: ASTDerivs -> Result ASTDerivs Defn
+P pUnaryDef = do
+  string "def" <* spaces
+  string "unary" <* spaces
+  o <- some $ noneOf $ "()" ++ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9']
+  args <- parens identifier <* spaces
+  body <- P adExpression
+  pure $ mkUnaryDef o args body
+  <?> "Unary"
+
+pExtern :: ASTDerivs -> Result ASTDerivs Defn
+P pExtern = do
+ string "extern" >> some space
+ name <- identifier
+ args <- parens (identifier `sepBy` spaces)
+ pure $ mkExtern name args
+
+pFuncDecl :: ASTDerivs -> Result ASTDerivs Defn
+P pFuncDecl = do
+  string "def" >> some space
+  name <- identifier
+  args <- parens (identifier `sepBy` spaces) <* spaces
+  body <- P adExpression
+  pure $ mkFunction name args body
 
 pExpression :: ASTDerivs -> Result ASTDerivs AST
 P pExpression = do
   first <- P adArithmetics <* spaces
   foll <- many ((char '=' <* spaces) *> (P adArithmetics <* spaces))
   pure $ foldl (mkBinOp Assignment) first foll
-  <?> "Assignment"
+  <?> "Expression"
 
 pArithmetics :: ASTDerivs -> Result ASTDerivs AST
 P pArithmetics = do
@@ -202,21 +240,6 @@ P pUnaryOp =
 pPostfix :: ASTDerivs -> Result ASTDerivs AST
 P pPostfix = P adFuncCall <|> P adPrimary
   <?> "Postfix"
-
-pExtern :: ASTDerivs -> Result ASTDerivs Defn
-P pExtern = do
- string "extern" >> some space
- name <- identifier
- args <- parens (identifier `sepBy` spaces)
- pure $ mkExtern name args
-
-pFuncDecl :: ASTDerivs -> Result ASTDerivs Defn
-P pFuncDecl = do
-  string "def" >> some space
-  name <- identifier
-  args <- parens (identifier `sepBy` spaces) <* spaces
-  body <- P adExpression
-  pure $ mkFunction name args body
 
 pFuncCall :: ASTDerivs -> Result ASTDerivs AST
 P pFuncCall = do
